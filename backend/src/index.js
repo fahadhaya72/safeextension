@@ -7,7 +7,7 @@ import morgan from 'morgan';
 import fetch from 'node-fetch';
 import { cache } from './cache.js';
 import logger from './logger.js';
-import { analyzeUrlSyntax, computeScore, classify, hasSuspiciousKeywords, isValidUrl } from './scoring.js';
+import { analyzeUrlSyntax, computeScore, classify, hasSuspiciousKeywords, isValidUrl, isIpObfuscation } from './scoring.js';
 import { checkSafeBrowsing } from './services/safebrowsing.js';
 import { getDomainAgeDays } from './services/whois.js';
 
@@ -100,6 +100,7 @@ app.post('/api/check-url', async (req, res) => {
     const syntax = analyzeUrlSyntax(normalizedUrl);
     const noHttps = syntax.protocol !== 'https';
     const suspicious = hasSuspiciousKeywords(normalizedUrl);
+    const ipObfuscation = isIpObfuscation(syntax.hostname);
 
     const [sb, domainAgeDays, redirects] = await Promise.all([
       checkSafeBrowsing(normalizedUrl),
@@ -110,6 +111,7 @@ app.post('/api/check-url', async (req, res) => {
     const factors = {
       noHttps,
       youngDomain: (domainAgeDays !== null) ? domainAgeDays < 180 : false,
+      ipObfuscation,
       listedInFeeds: !!sb.listed,
       suspiciousKeywords: suspicious,
       excessiveRedirects: redirects.excessive
@@ -170,6 +172,7 @@ app.post('/api/risk-details', async (req, res) => {
     const syntax = analyzeUrlSyntax(normalizedUrl);
     const noHttps = syntax.protocol !== 'https';
     const suspicious = hasSuspiciousKeywords(normalizedUrl);
+    const ipObfuscation = isIpObfuscation(syntax.hostname);
 
     const [sb, domainAgeDays, redirects] = await Promise.all([
       checkSafeBrowsing(normalizedUrl),
@@ -180,6 +183,7 @@ app.post('/api/risk-details', async (req, res) => {
     const factors = {
       noHttps,
       youngDomain: (domainAgeDays !== null) ? domainAgeDays < 180 : false,
+      ipObfuscation,
       listedInFeeds: !!sb.listed,
       suspiciousKeywords: suspicious,
       excessiveRedirects: redirects.excessive

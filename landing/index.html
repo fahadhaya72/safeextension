@@ -41,10 +41,9 @@
         <label for="landing-url" class="sr-only">URL to check</label>
         <input id="landing-url" type="url" placeholder="https://example.com" aria-label="URL to check" />
         <button id="landing-check-btn" class="btn small" type="submit">Check</button>
-        <div id="landing-loader" class="hidden" aria-hidden="true">Checking…</div>
       </form>
-
-      <div id="landing-result" class="landing-result hidden" aria-live="polite"></div>
+      <div id="landing-loader" class="hidden" aria-hidden="true" style="margin-top: 12px;">Checking…</div>
+      <div id="landing-result" class="landing-result hidden" aria-live="polite" style="margin-top: 16px;"></div>
 
       <ul class="kpi" aria-hidden="false">
         <li><strong>Real-time</strong><span>Checks when you navigate</span></li>
@@ -160,5 +159,6 @@ npm run dev
   </div>
 </footer>
 
+<script src="script.js"></script>
 </body>
 </html>
