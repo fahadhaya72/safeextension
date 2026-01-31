@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "SafeExtension",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Browser extension to check URLs for phishing, malware, and other security risks",
   "permissions": [
     "activeTab",
