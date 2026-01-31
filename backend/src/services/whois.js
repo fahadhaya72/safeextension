@@ -1,4 +1,3 @@
-import whois from 'whois-json';
 import fetch from 'node-fetch';
 import { parse } from 'tldts';
 import logger from '../logger.js';
@@ -77,28 +76,31 @@ export async function getDomainAgeDays(inputUrl) {
       // If API call fails or no date found, fall through to whois-json
     }
 
-    // Fallback to whois-json with retries
-    const whoisTimeout = Number(process.env.WHOIS_TIMEOUT_MS || 10000);
-    const whoisAttempts = Number(process.env.WHOIS_RETRIES || 2);
-    for (let i = 0; i < whoisAttempts; i++) {
-      try {
-        const data = await whois(domain, { follow: 3, verbose: false, timeout: whoisTimeout });
-        const created = data.creationDate || data.createdDate || data['Creation Date'] || data['created'] || data['Created'];
-        if (!created) {
-          logger.warn({ domain, attempt: i + 1, raw: data }, 'whois-json returned no creation date');
-        } else {
-          const createdAt = new Date(created);
-          if (!isNaN(createdAt.getTime())) {
-            const days = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
-            return days;
-          } else {
-            logger.warn({ domain, created }, 'whois-json returned unparseable date');
+    // Fallback: use RDAP (JSON) lookup which is widely available and returns events
+    try {
+      const rdapUrl = `https://rdap.org/domain/${encodeURIComponent(domain)}`;
+      const rdapResp = await retryFetch(rdapUrl, { timeout: 8000 }, 2);
+      if (rdapResp && rdapResp.ok) {
+        const rdapData = await rdapResp.json();
+        // RDAP may include events array with registration/registrationDate
+        if (Array.isArray(rdapData.events)) {
+          const reg = rdapData.events.find(e => /regist/i.test(e.eventAction) || /registration/i.test(e.eventAction));
+          if (reg && reg.eventDate) {
+            const createdAt = new Date(reg.eventDate);
+            if (!isNaN(createdAt.getTime())) {
+              const days = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+              return days;
+            }
           }
         }
-      } catch (err) {
-        logger.warn({ err: String(err), attempt: i + 1 }, 'WHOIS lookup failed');
-        if (i + 1 < whoisAttempts) await new Promise(r => setTimeout(r, 500));
+        // Some RDAP responses include 'registration' or 'registrationDate' directly
+        if (rdapData.registration) {
+          const createdAt = new Date(rdapData.registration);
+          if (!isNaN(createdAt.getTime())) return Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+        }
       }
+    } catch (err) {
+      logger.warn({ err: String(err) }, 'RDAP lookup failed');
     }
 
     return null;
