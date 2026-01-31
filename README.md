@@ -2,6 +2,10 @@
 
 A comprehensive browser extension that analyzes URLs for phishing, malware, and other security risks in real-time.
 
+Live Demo :
+```
+https://lnkd.in/dqyH4NbP
+```
 ## 📋 Table of Contents
 
 - [Features](#features)
