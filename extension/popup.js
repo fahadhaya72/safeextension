@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:4000/api';
+const API_BASE_URL = 'https://safeextension-backend.onrender.com/api';
 const CACHE_TIME = 5 * 60 * 1000; // 5 minutes
 
 class URLChecker {

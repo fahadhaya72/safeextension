@@ -1,7 +1,7 @@
 // Background Service Worker for SafeExtension
 // Handles messages and communicates between content scripts and popup
 
-const API_BASE_URL = 'http://localhost:4000/api';
+const API_BASE_URL = 'https://safeextension-backend.onrender.com/api';
 
 // Listen for messages from content scripts and popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
