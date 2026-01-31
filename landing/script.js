@@ -133,7 +133,17 @@ document.addEventListener('DOMContentLoaded', () => {
       showLoader();
 
       try {
-        const normalized = url.match(/^https?:\/\//) ? url : 'https://' + url;
+        // Fix URL normalization: handle cases like "https:domain.com" or "https:/domain.com"
+        let normalized = url;
+        if (!normalized.match(/^https?:\/\//)) {
+          // Fix common mistakes: "https:domain.com" → "https://domain.com"
+          normalized = normalized.replace(/^(https?):([^/])/, '$1://$2');
+          // If still no protocol, add https://
+          if (!normalized.match(/^https?:\/\//)) {
+            normalized = 'https://' + normalized;
+          }
+        }
+        console.log('[SafeExtension] Normalized URL:', normalized);
         console.log('[SafeExtension] Calling API at:', `${API_BASE}/check-url`);
 
         const response = await fetch(`${API_BASE}/check-url`, {
