@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SafeExtension — URL Risk Detection</title>
+  <meta name="description" content="SafeExtension runs a quick safety check on sites you visit and warns or blocks suspicious pages. Self-hostable backend, local policies, and no tracking." />
+  <meta name="theme-color" content="#0b0f14">
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+<header class="site-header" role="banner">
+  <div class="container header-flex">
+    <div class="brand" aria-hidden="true">SafeExtension</div>
+    <nav role="navigation" aria-label="Main navigation">
+      <a href="#how">How</a>
+      <a href="#features">Features</a>
+      <a href="#install">Install</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<section class="hero">
+  <div class="container hero-grid">
+    <div class="hero-left fade-in">
+      <h1>Before you trust a site — check it first.</h1>
+      <p class="lead">
+        Phishing and scam pages are getting more convincing. SafeExtension gives a quick, easy safety score when you visit a site and acts according to that score.
+      </p>
+
+      <div class="cta-row">
+        <a class="btn primary" href="../extension" target="_blank" rel="noopener" title="Open extension folder">Load extension (unpacked)</a>
+        <a class="btn ghost" href="#how">How detection works</a>
+      </div>
+
+      <ul class="kpi" aria-hidden="false">
+        <li><strong>Real-time</strong><span>Checks when you navigate</span></li>
+        <li><strong>Cautious</strong><span>Warn early, block obvious scams</span></li>
+        <li><strong>Private</strong><span>Only hostname is sent for analysis</span></li>
+      </ul>
+    </div>
+
+    <div class="hero-right slide-up" aria-hidden="true">
+      <div class="scan-card" role="img" aria-label="sample blocked site card">
+        <div class="score danger" aria-hidden="true">12</div>
+        <div class="domain">Blocked — example</div>
+        <pre class="log" aria-hidden="true">[WARN] domain_age = 3 days
+[WARN] redirect_chain = 4
+[BLOCK] score = 12</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="how" class="section">
+  <div class="container">
+    <h2>How it works</h2>
+
+    <div class="steps">
+      <div class="step">
+        <span>01</span>
+        <h3>Observe navigation</h3>
+        <p>Monitors top-level navigations and user-initiated link clicks.</p>
+      </div>
+
+      <div class="step">
+        <span>02</span>
+        <h3>Score the domain</h3>
+        <p>WHOIS age, redirects, reputation signals and heuristics.</p>
+      </div>
+
+      <div class="step">
+        <span>03</span>
+        <h3>Enforce policy</h3>
+        <p>Warn, restrict or block based on risk thresholds.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section alt">
+  <div class="container narrow">
+    <h2>What this extension does <em>not</em> do</h2>
+    <p class="warning-text">
+      This tool does not guarantee safety. Compromised legitimate websites,
+      zero-day phishing campaigns and short-lived domains can bypass
+      any heuristic system.
+    </p>
+    <p class="warning-text strong">
+      If you expect perfect detection, this is not the product for you.
+    </p>
+  </div>
+</section>
+
+<section id="features" class="section">
+  <div class="container">
+    <h2>Features</h2>
+
+    <div class="features-grid">
+      <div class="feature">
+        <h4>Automatic evaluation</h4>
+        <p>No buttons. Decisions happen on navigation.</p>
+      </div>
+
+      <div class="feature">
+        <h4>Per-domain overrides</h4>
+        <p>Local allow/block rules always win.</p>
+      </div>
+
+      <div class="feature">
+        <h4>Minimal data exposure</h4>
+        <p>Only the hostname is transmitted.</p>
+      </div>
+
+      <div class="feature">
+        <h4>Self-hostable backend</h4>
+        <p>API keys stay on your server.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="install" class="section">
+  <div class="container narrow">
+    <h2>Install</h2>
+
+    <ol class="install-list">
+      <li>This is a developer-mode extension.</li>
+      <li>Clone or download the repository.</li>
+      <li>Enable developer mode in your browser.</li>
+      <li>Load the <code>extension</code> folder.</li>
+    </ol>
+
+    <pre class="terminal">
+cd backend
+npm install
+npm run dev
+    </pre>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <p>Built as a defensive experiment against modern phishing tactics.</p>
+  </div>
+</footer>
+
+</body>
+</html>

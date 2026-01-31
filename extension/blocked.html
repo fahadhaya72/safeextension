@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Blocked — SafeExtension</title>
+  <link rel="stylesheet" href="blocked.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Access Blocked</h1>
+    <p id="msg">This site has been blocked by SafeExtension because it appears to be malicious.</p>
+    <div class="meta">
+      <p><strong>Site:</strong> <span id="site"></span></p>
+      <p><strong>Score:</strong> <span id="score"></span>/100</p>
+    </div>
+    <div class="actions">
+      <button id="goBack">Return to Safety</button>
+      <button id="report">Report False Positive</button>
+    </div>
+    <p class="note">To unblock this site for all users, please update the extension settings (not available in this demo).</p>
+  </div>
+  <script src="blocked.js"></script>
+</body>
+</html>

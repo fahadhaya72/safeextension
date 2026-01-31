@@ -1,0 +1,10 @@
+body{font-family:Inter,Segoe UI,Arial,Helvetica,sans-serif;background:#0b0b0d;color:#fff;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}
+.container{max-width:780px;padding:28px;border-radius:8px;background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01));box-shadow:0 8px 40px rgba(0,0,0,0.6);text-align:center}
+.container h1{margin:0 0 8px;font-size:28px;color:#ff6b6b}
+.container p{margin:0 0 12px}
+.meta{margin:12px 0;color:#ddd}
+.actions{display:flex;gap:12px;justify-content:center;margin-top:18px}
+.actions button{padding:10px 14px;border-radius:6px;border:none;cursor:pointer}
+.actions #goBack{background:#10b981;color:#fff}
+.actions #report{background:#374151;color:#fff}
+.note{margin-top:14px;color:#999;font-size:13px}
