@@ -4,7 +4,7 @@ A comprehensive browser extension that analyzes URLs for phishing, malware, and 
 
 Live Demo :
 ```
-https://lnkd.in/dqyH4NbP
+https://safeextension.vercel.app/
 ```
 ## 📋 Table of Contents
 
