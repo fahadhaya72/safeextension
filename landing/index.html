@@ -37,6 +37,15 @@
         <a class="btn ghost" href="#how">How detection works</a>
       </div>
 
+      <form id="landing-check-form" class="inline-check" aria-label="Check a URL">
+        <label for="landing-url" class="sr-only">URL to check</label>
+        <input id="landing-url" type="url" placeholder="https://example.com" aria-label="URL to check" />
+        <button id="landing-check-btn" class="btn small" type="submit">Check</button>
+        <div id="landing-loader" class="hidden" aria-hidden="true">Checking…</div>
+      </form>
+
+      <div id="landing-result" class="landing-result hidden" aria-live="polite"></div>
+
       <ul class="kpi" aria-hidden="false">
         <li><strong>Real-time</strong><span>Checks when you navigate</span></li>
         <li><strong>Cautious</strong><span>Warn early, block obvious scams</span></li>
