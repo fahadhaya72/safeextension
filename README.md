@@ -339,9 +339,9 @@ SafeExtension uses a **risk-based scoring system** (0-100 scale):
 
 ### Risk Classification
 
-- **Low Risk** (Score: 0-49): 🚫 Block - High confidence malicious
+- **High Risk** (Score: 0-49): 🚫 Block - High confidence malicious
 - **Medium Risk** (Score: 50-89): ⚠️ Warn - Suspicious, proceed carefully
-- **High Risk** (Score: 90-100): ✅ Allow - Safe, no major threats
+- **Loq Risk** (Score: 90-100): ✅ Allow - Safe, no major threats
 
 ### Risk Factors
 
@@ -503,5 +503,5 @@ For issues, questions, or suggestions:
 ---
 
 **Last Updated**: January 2026  
-**Version**: 1.0.0  
+**Version**: 1.1.3  
 **Status**: Production Ready ✅
