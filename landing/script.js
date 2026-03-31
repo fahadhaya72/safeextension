@@ -95,6 +95,16 @@ document.addEventListener('DOMContentLoaded', () => {
     return div.innerHTML;
   }
 
+  function getActionDescription(action) {
+    const descriptions = {
+      'allow': '✅ Safe to visit',
+      'alert': '⚠️ Proceed with caution',
+      'high_alert': '🔴 High risk - be very careful',
+      'block': '🚫 Dangerous - do not visit'
+    };
+    return descriptions[action] || '❓ Unknown status';
+  }
+
   function getScoreClass(score) {
     if (typeof score !== 'number') return 'unknown';
     if (score >= 90) return 'safe';
@@ -122,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <span class="score ${getScoreClass(score)}">${score}/100</span>
         </p>
         <p style="margin: 8px 0;">
-          <strong>Recommendation:</strong> <em>${escapeHtml(String(action)).toUpperCase()}</em>
+          <strong>Recommendation:</strong> ${getActionDescription(action)}
         </p>
     `;
 
@@ -141,8 +151,6 @@ document.addEventListener('DOMContentLoaded', () => {
       html += '</ul>';
     }
 
-    html += '<h4 style="margin: 12px 0 8px; font-size: 0.95rem;">Raw API Response:</h4>';
-    html += `<pre style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; overflow-x: auto; font-size: 0.85rem;">${escapeHtml(JSON.stringify(data, null, 2))}</pre>`;
     html += '</div>';
     resultBox.innerHTML = html;
     resultBox.classList.remove('hidden');
