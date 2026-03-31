@@ -7,7 +7,7 @@ import morgan from 'morgan';
 import fetch from 'node-fetch';
 import { cache } from './cache.js';
 import logger from './logger.js';
-import { analyzeUrlSyntax, computeScore, classify, hasSuspiciousKeywords, isValidUrl, isIpObfuscation } from './scoring.js';
+import { analyzeUrlSyntax, computeScore, classify, hasSuspiciousKeywords, isValidUrl, isIpObfuscation, isTemporaryService, hasSuspiciousSubdomain } from './scoring.js';
 import { checkSafeBrowsing } from './services/safebrowsing.js';
 import { getDomainAgeDays } from './services/whois.js';
 
@@ -101,6 +101,8 @@ app.post('/api/check-url', async (req, res) => {
     const noHttps = syntax.protocol !== 'https';
     const suspicious = hasSuspiciousKeywords(normalizedUrl);
     const ipObfuscation = isIpObfuscation(syntax.hostname);
+    const temporaryService = isTemporaryService(syntax.hostname);
+    const suspiciousSubdomain = hasSuspiciousSubdomain(syntax.hostname);
 
     const [sb, domainAgeDays, redirects] = await Promise.all([
       checkSafeBrowsing(normalizedUrl),
@@ -114,7 +116,9 @@ app.post('/api/check-url', async (req, res) => {
       ipObfuscation,
       listedInFeeds: !!sb.listed,
       suspiciousKeywords: suspicious,
-      excessiveRedirects: redirects.excessive
+      excessiveRedirects: redirects.excessive,
+      temporaryService,
+      suspiciousSubdomain
     };
 
     const result = responseFromFactors(normalizedUrl, factors, {
@@ -173,6 +177,8 @@ app.post('/api/risk-details', async (req, res) => {
     const noHttps = syntax.protocol !== 'https';
     const suspicious = hasSuspiciousKeywords(normalizedUrl);
     const ipObfuscation = isIpObfuscation(syntax.hostname);
+    const temporaryService = isTemporaryService(syntax.hostname);
+    const suspiciousSubdomain = hasSuspiciousSubdomain(syntax.hostname);
 
     const [sb, domainAgeDays, redirects] = await Promise.all([
       checkSafeBrowsing(normalizedUrl),
@@ -186,7 +192,9 @@ app.post('/api/risk-details', async (req, res) => {
       ipObfuscation,
       listedInFeeds: !!sb.listed,
       suspiciousKeywords: suspicious,
-      excessiveRedirects: redirects.excessive
+      excessiveRedirects: redirects.excessive,
+      temporaryService,
+      suspiciousSubdomain
     };
 
     const result = responseFromFactors(normalizedUrl, factors, {

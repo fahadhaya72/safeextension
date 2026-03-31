@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SafeExtension Launcher</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #071018, #0d1620);
+      color: #e6eef8;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      text-align: center;
+      max-width: 600px;
+      padding: 40px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    h1 { color: #ff8a42; margin-bottom: 20px; }
+    .btn {
+      display: inline-block;
+      padding: 12px 24px;
+      margin: 10px;
+      background: linear-gradient(135deg, #ff8a42, #ffb07a);
+      color: #071014;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      transition: transform 0.2s;
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .btn.secondary {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #e6eef8;
+    }
+    .code {
+      background: rgba(0,0,0,0.3);
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      font-family: monospace;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🚀 SafeExtension Landing Page</h1>
+    <p>To avoid browser security issues, please use one of these methods:</p>
+    
+    <div class="code">
+      <strong>Method 1 - Python Server:</strong><br>
+      python server.py<br>
+      Then open: http://localhost:8000
+    </div>
+    
+    <div class="code">
+      <strong>Method 2 - Batch File (Windows):</strong><br>
+      Double-click: start-server.bat
+    </div>
+    
+    <div class="code">
+      <strong>Method 3 - Manual:</strong><br>
+      python -m http.server 8000<br>
+      Then open: http://localhost:8000
+    </div>
+    
+    <a href="http://localhost:8000" class="btn" onclick="window.open('http://localhost:8000'); return false;">Open Landing Page</a>
+    <a href="index.html" class="btn secondary">Open Anyway (May Have Errors)</a>
+  </div>
+</body>
+</html>

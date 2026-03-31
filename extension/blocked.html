@@ -3,22 +3,48 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Blocked — SafeExtension</title>
+  <title>🚫 Site Permanently Blocked — SafeExtension</title>
   <link rel="stylesheet" href="blocked.css">
 </head>
 <body>
   <div class="container">
-    <h1>Access Blocked</h1>
-    <p id="msg">This site has been blocked by SafeExtension because it appears to be malicious.</p>
+    <div class="icon">🛡️</div>
+    <h1>Site Permanently Blocked</h1>
+    <p id="msg">This site has been permanently blocked by SafeExtension because it poses a severe security risk.</p>
+    
+    <div class="risk-indicator">
+      <div class="risk-score">
+        <span class="score-value" id="score">0</span>
+        <span class="score-total">/100</span>
+      </div>
+      <div class="risk-label">CRITICAL THREAT</div>
+    </div>
+    
     <div class="meta">
-      <p><strong>Site:</strong> <span id="site"></span></p>
-      <p><strong>Score:</strong> <span id="score"></span>/100</p>
+      <p><strong>Blocked Site:</strong> <span id="site"></span></p>
+      <p><strong>Risk Score:</strong> <span id="scoreDetail"></span>/100</p>
+      <p><strong>Block Reason:</strong> <span id="reason">Severe security risks detected</span></p>
     </div>
+    
     <div class="actions">
-      <button id="goBack">Return to Safety</button>
-      <button id="report">Report False Positive</button>
+      <button id="goBack">⬅️ Go Back to Safety</button>
+      <button id="report">📋 Report False Positive</button>
+      <button id="moreInfo">ℹ️ Learn More</button>
     </div>
-    <p class="note">To unblock this site for all users, please update the extension settings (not available in this demo).</p>
+    
+    <div class="warning-details" id="warningDetails" style="display: none;">
+      <h3>Why This Site Was Blocked</h3>
+      <p>Sites with scores below 10 are automatically blocked because they exhibit multiple severe risk factors:</p>
+      <ul>
+        <li>Known malicious/phishing behavior</li>
+        <li>Distribution of malware</li>
+        <li>Fraudulent or scam content</li>
+        <li>Adult content violations</li>
+        <li>Severe security vulnerabilities</li>
+      </ul>
+    </div>
+    
+    <p class="note">This block is stored in your Chrome profile and will persist across browser sessions. To manage blocked sites, visit SafeExtension settings.</p>
   </div>
   <script src="blocked.js"></script>
 </body>

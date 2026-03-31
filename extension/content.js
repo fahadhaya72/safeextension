@@ -178,7 +178,6 @@ function showWarningOverlay(score, level, url) {
     overlay.style.left = '0';
     overlay.style.right = '0';
     overlay.style.zIndex = '9999999999';
-    overlay.style.background = 'rgba(0,0,0,0.6)';
     overlay.style.color = '#fff';
     overlay.style.display = 'flex';
     overlay.style.flexDirection = 'column';
@@ -186,32 +185,71 @@ function showWarningOverlay(score, level, url) {
     overlay.style.justifyContent = 'center';
     overlay.style.height = '100vh';
 
+    // Color scheme based on risk level
+    const colors = {
+      alert: { bg: 'rgba(245, 158, 11, 0.9)', box: '#f59e0b', text: '#fff' },
+      high_alert: { bg: 'rgba(239, 68, 68, 0.9)', box: '#ef4444', text: '#fff' },
+      block: { bg: 'rgba(127, 29, 29, 0.9)', box: '#991b1b', text: '#fff' }
+    };
+
+    const color = colors[level] || colors.alert;
+    overlay.style.background = color.bg;
+
     const box = document.createElement('div');
-    box.style.background = '#111';
-    box.style.padding = '20px';
-    box.style.borderRadius = '8px';
+    box.style.background = color.box;
+    box.style.padding = '24px';
+    box.style.borderRadius = '12px';
     box.style.maxWidth = '720px';
     box.style.width = '90%';
-    box.style.boxShadow = '0 6px 24px rgba(0,0,0,0.5)';
+    box.style.boxShadow = '0 10px 32px rgba(0,0,0,0.5)';
+    box.style.textAlign = 'center';
 
     const title = document.createElement('h2');
-    title.textContent = level === 'suggest' ? 'Potentially Dangerous Site' : 'Warning: Risky Site Detected';
     title.style.marginTop = '0';
+    title.style.fontSize = '24px';
+    title.style.fontWeight = 'bold';
+    
+    const messages = {
+      alert: '⚠️ Medium Risk Site Detected',
+      high_alert: '🔴 High Risk Site Detected', 
+      block: '🚫 Dangerous Site Blocked'
+    };
+    title.textContent = messages[level] || messages.alert;
 
     const p = document.createElement('p');
-    p.textContent = `This site (${url}) has a safety score of ${score}/100.`;
+    p.style.fontSize = '16px';
+    p.style.marginBottom = '20px';
+    p.textContent = `This site (${new URL(url).hostname}) has a safety score of ${score}/100.`;
+
+    const description = document.createElement('p');
+    description.style.fontSize = '14px';
+    description.style.marginBottom = '24px';
+    description.style.opacity = '0.9';
+    
+    const descriptions = {
+      alert: 'This site shows some warning signs but may be legitimate. Proceed with caution.',
+      high_alert: 'This site exhibits multiple risk factors. Navigation is strongly discouraged.',
+      block: 'This site has been permanently blocked due to severe security risks.'
+    };
+    description.textContent = descriptions[level] || descriptions.alert;
 
     const btns = document.createElement('div');
     btns.style.display = 'flex';
     btns.style.gap = '12px';
-    btns.style.marginTop = '12px';
+    btns.style.justifyContent = 'center';
+    btns.style.marginTop = '20px';
 
     const backBtn = document.createElement('button');
     backBtn.textContent = 'Go Back (Safer)';
-    backBtn.style.padding = '8px 12px';
+    backBtn.style.padding = '10px 20px';
+    backBtn.style.border = 'none';
+    backBtn.style.borderRadius = '6px';
     backBtn.style.cursor = 'pointer';
+    backBtn.style.fontSize = '14px';
+    backBtn.style.fontWeight = '600';
+    backBtn.style.background = 'rgba(255,255,255,0.2)';
+    backBtn.style.color = '#fff';
     backBtn.addEventListener('click', () => {
-      // Try go back in history; if not possible, navigate to search
       if (window.history.length > 1) {
         window.history.back();
       } else {
@@ -220,9 +258,15 @@ function showWarningOverlay(score, level, url) {
     });
 
     const proceedBtn = document.createElement('button');
-    proceedBtn.textContent = 'Proceed Anyway';
-    proceedBtn.style.padding = '8px 12px';
+    proceedBtn.textContent = level === 'block' ? 'Understood' : 'Proceed Anyway';
+    proceedBtn.style.padding = '10px 20px';
+    proceedBtn.style.border = 'none';
+    proceedBtn.style.borderRadius = '6px';
     proceedBtn.style.cursor = 'pointer';
+    proceedBtn.style.fontSize = '14px';
+    proceedBtn.style.fontWeight = '600';
+    proceedBtn.style.background = 'rgba(255,255,255,0.9)';
+    proceedBtn.style.color = color.box;
     proceedBtn.addEventListener('click', () => {
       const el = document.getElementById('safe-ext-overlay');
       if (el) el.remove();
@@ -233,9 +277,18 @@ function showWarningOverlay(score, level, url) {
 
     box.appendChild(title);
     box.appendChild(p);
+    box.appendChild(description);
     box.appendChild(btns);
     overlay.appendChild(box);
     document.body.appendChild(overlay);
+
+    // Auto-dismiss for alerts after 15 seconds
+    if (level === 'alert') {
+      setTimeout(() => {
+        const el = document.getElementById('safe-ext-overlay');
+        if (el) el.remove();
+      }, 15000);
+    }
   } catch (e) {
     console.error('Failed to show overlay:', e);
   }

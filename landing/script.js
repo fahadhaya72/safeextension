@@ -1,5 +1,11 @@
 // Main landing page interactions
 document.addEventListener('DOMContentLoaded', () => {
+  // Check if running in file:// protocol and show warning
+  if (window.location.protocol === 'file:') {
+    console.warn('⚠️ Running in file:// protocol. Some features may not work properly.');
+    console.warn('💡 Use a local server: python server.py or start-server.bat');
+  }
+
   // Smooth scroll for hash links
   document.querySelectorAll('a[href^="#"]').forEach(a => {
     a.addEventListener('click', (ev) => {
@@ -18,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }, { threshold: 0.12 });
 
-  document.querySelectorAll('.card, .step, .feature, .hero-right .mock').forEach(el => io.observe(el));
+  document.querySelectorAll('.url-checker-card, .enhanced-step, .enhanced-feature, .hero-right .enhanced-card').forEach(el => io.observe(el));
 
   // Focus visible for keyboard users
   document.body.addEventListener('keyup', (e) => {
@@ -38,6 +44,17 @@ document.addEventListener('DOMContentLoaded', () => {
     requestAnimationFrame(float);
   }
 
+  // Enhanced button interactions
+  const checkBtn = document.getElementById('landing-check-btn');
+  if (checkBtn) {
+    checkBtn.addEventListener('mouseenter', () => {
+      checkBtn.style.transform = 'translateY(-2px)';
+    });
+    checkBtn.addEventListener('mouseleave', () => {
+      checkBtn.style.transform = 'translateY(0)';
+    });
+  }
+
   // ===== URL CHECK FORM =====
   const API_BASE = 'https://safeextension-backend.onrender.com/api';
   const form = document.getElementById('landing-check-form');
@@ -50,10 +67,26 @@ document.addEventListener('DOMContentLoaded', () => {
   function showLoader() {
     if (loader) loader.classList.remove('hidden');
     if (resultBox) resultBox.classList.add('hidden');
+    // Update button state
+    if (checkBtn) {
+      const btnText = checkBtn.querySelector('.btn-text');
+      const btnLoader = checkBtn.querySelector('.btn-loader');
+      if (btnText) btnText.style.display = 'none';
+      if (btnLoader) btnLoader.style.display = 'inline';
+      checkBtn.disabled = true;
+    }
   }
 
   function hideLoader() {
     if (loader) loader.classList.add('hidden');
+    // Reset button state
+    if (checkBtn) {
+      const btnText = checkBtn.querySelector('.btn-text');
+      const btnLoader = checkBtn.querySelector('.btn-loader');
+      if (btnText) btnText.style.display = 'inline';
+      if (btnLoader) btnLoader.style.display = 'none';
+      checkBtn.disabled = false;
+    }
   }
 
   function escapeHtml(str) {
@@ -64,7 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function getScoreClass(score) {
     if (typeof score !== 'number') return 'unknown';
-    if (score >= 80) return 'safe';
+    if (score >= 90) return 'safe';
     if (score >= 50) return 'warning';
     return 'danger';
   }

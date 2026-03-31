@@ -68,7 +68,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     const domain = (new URL(url)).hostname;
 
     // Check storage to see if domain is permanently blocked
-    const storage = await chrome.storage.local.get(['blockedDomains']);
+    const storage = await chrome.storage.sync.get(['blockedDomains']);
     const blocked = storage.blockedDomains || [];
     if (blocked.includes(domain)) {
       // Redirect to blocked interstitial
@@ -92,21 +92,35 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     const score = typeof result.score === 'number' ? result.score : 100;
 
     if (score < 10) {
-      // Permanently block: store in storage and redirect
+      // Permanently block: store in chrome.storage.sync and redirect
       const newBlocked = Array.from(new Set([...(blocked || []), domain]));
-      await chrome.storage.local.set({ blockedDomains: newBlocked });
+      await chrome.storage.sync.set({ blockedDomains: newBlocked });
       await redirectToBlocked(tabId, url, score);
       return;
     }
 
     // For warnings/suggestions, send a message to content script to show an overlay
-    if (score < 80) {
-      const level = score < 50 ? 'suggest' : 'warn';
-      try {
-        await chrome.tabs.sendMessage(tabId, { action: 'showWarning', score, level, url });
-      } catch (e) {
-        // content script may not be injected for some pages; ignore
-      }
+    // Score ranges: >90 allow silently, 50-75 alert, 10-40 high alert
+    if (score > 90) {
+      // Safe site - no warning needed, allow silently
+      return;
+    }
+
+    let level;
+    if (score >= 50 && score <= 75) {
+      level = 'alert';           // 50-75: Show alert
+    } else if (score >= 10 && score < 40) {
+      level = 'high_alert';      // 10-40: High alert
+    } else {
+      // 76-90: Safe zone, no warning (already handled above)
+      // <10: Permanent block (already handled above)
+      return;
+    }
+    
+    try {
+      await chrome.tabs.sendMessage(tabId, { action: 'showWarning', score, level, url });
+    } catch (e) {
+      // content script may not be injected for some pages; ignore
     }
   } catch (e) {
     console.error('tabs.onUpdated handler error:', e);

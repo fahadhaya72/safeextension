@@ -3,10 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; connect-src 'self' https://safeextension-backend.onrender.com; img-src 'self' data:;">
   <title>SafeExtension — URL Risk Detection</title>
   <meta name="description" content="SafeExtension runs a quick safety check on sites you visit and warns or blocks suspicious pages. Self-hostable backend, local policies, and no tracking." />
   <meta name="theme-color" content="#0b0f14">
   <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 
 <body>
@@ -27,23 +31,38 @@
 <section class="hero">
   <div class="container hero-grid">
     <div class="hero-left fade-in">
-      <h1>Before you trust a site — check it first.</h1>
+      <h1>Before you trust a site — <span class="text-gradient">check it first.</span></h1>
       <p class="lead">
         Phishing and scam pages are getting more convincing. SafeExtension gives a quick, easy safety score when you visit a site and acts according to that score.
       </p>
 
       <div class="cta-row">
-        <a class="btn primary" href="../extension" target="_blank" rel="noopener" title="Open extension folder">Load extension (unpacked)</a>
-        <a class="btn ghost" href="#how">How detection works</a>
+        <a class="btn primary" href="../extension" target="_blank" rel="noopener" title="Open extension folder">
+          <span class="btn-icon">📦</span>
+          Load extension (unpacked)
+        </a>
+        <a class="btn ghost" href="#how">
+          <span class="btn-icon">🔍</span>
+          How detection works
+        </a>
       </div>
 
-      <form id="landing-check-form" class="inline-check" aria-label="Check a URL">
-        <label for="landing-url" class="sr-only">URL to check</label>
-        <input id="landing-url" type="url" placeholder="https://example.com" aria-label="URL to check" />
-        <button id="landing-check-btn" class="btn small" type="submit">Check</button>
-      </form>
-      <div id="landing-loader" class="hidden" aria-hidden="true" style="margin-top: 12px;">Checking…</div>
-      <div id="landing-result" class="landing-result hidden" aria-live="polite" style="margin-top: 16px;"></div>
+      <div class="url-checker-card">
+        <div class="card-header">
+          <h3>Check a URL</h3>
+          <span class="card-badge">Live Test</span>
+        </div>
+        <form id="landing-check-form" class="inline-check" aria-label="Check a URL">
+          <label for="landing-url" class="sr-only">URL to check</label>
+          <input id="landing-url" type="url" placeholder="https://example.com" aria-label="URL to check" value="https://chatgpt.com" />
+          <button id="landing-check-btn" class="btn small" type="submit">
+            <span class="btn-text">Check</span>
+            <span class="btn-loader" style="display: none;">⏳</span>
+          </button>
+        </form>
+        <div id="landing-loader" class="hidden" aria-hidden="true" style="margin-top: 12px;">Checking…</div>
+        <div id="landing-result" class="landing-result hidden" aria-live="polite" style="margin-top: 16px;"></div>
+      </div>
 
       <ul class="kpi" aria-hidden="false">
         <li><strong>Real-time</strong><span>Checks when you navigate</span></li>
@@ -53,9 +72,16 @@
     </div>
 
     <div class="hero-right slide-up" aria-hidden="true">
-      <div class="scan-card" role="img" aria-label="sample blocked site card">
-        <div class="score danger" aria-hidden="true">12</div>
-        <div class="domain">Blocked — example</div>
+      <div class="scan-card enhanced-card" role="img" aria-label="sample blocked site card">
+        <div class="card-top">
+          <div class="score danger" aria-hidden="true">12</div>
+          <div class="card-status blocked">🚫 Blocked</div>
+        </div>
+        <div class="domain">example.com</div>
+        <div class="risk-indicator">
+          <span class="risk-bar" style="width: 12%"></span>
+          <span class="risk-label">High Risk</span>
+        </div>
         <pre class="log" aria-hidden="true">[WARN] domain_age = 3 days
 [WARN] redirect_chain = 4
 [BLOCK] score = 12</pre>
@@ -69,22 +95,28 @@
     <h2>How it works</h2>
 
     <div class="steps">
-      <div class="step">
-        <span>01</span>
+      <div class="step enhanced-step">
+        <div class="step-icon">👁️</div>
+        <div class="step-number">01</div>
         <h3>Observe navigation</h3>
         <p>Monitors top-level navigations and user-initiated link clicks.</p>
+        <div class="step-detail">Real-time monitoring</div>
       </div>
 
-      <div class="step">
-        <span>02</span>
+      <div class="step enhanced-step">
+        <div class="step-icon">📊</div>
+        <div class="step-number">02</div>
         <h3>Score the domain</h3>
         <p>WHOIS age, redirects, reputation signals and heuristics.</p>
+        <div class="step-detail">Multi-factor analysis</div>
       </div>
 
-      <div class="step">
-        <span>03</span>
+      <div class="step enhanced-step">
+        <div class="step-icon">🛡️</div>
+        <div class="step-number">03</div>
         <h3>Enforce policy</h3>
         <p>Warn, restrict or block based on risk thresholds.</p>
+        <div class="step-detail">Automatic protection</div>
       </div>
     </div>
   </div>
@@ -109,24 +141,32 @@
     <h2>Features</h2>
 
     <div class="features-grid">
-      <div class="feature">
+      <div class="feature enhanced-feature">
+        <div class="feature-icon">⚡</div>
         <h4>Automatic evaluation</h4>
         <p>No buttons. Decisions happen on navigation.</p>
+        <div class="feature-badge">Core Feature</div>
       </div>
 
-      <div class="feature">
+      <div class="feature enhanced-feature">
+        <div class="feature-icon">⚙️</div>
         <h4>Per-domain overrides</h4>
         <p>Local allow/block rules always win.</p>
+        <div class="feature-badge">Customizable</div>
       </div>
 
-      <div class="feature">
+      <div class="feature enhanced-feature">
+        <div class="feature-icon">🔒</div>
         <h4>Minimal data exposure</h4>
         <p>Only the hostname is transmitted.</p>
+        <div class="feature-badge">Privacy First</div>
       </div>
 
-      <div class="feature">
+      <div class="feature enhanced-feature">
+        <div class="feature-icon">🏠</div>
         <h4>Self-hostable backend</h4>
         <p>API keys stay on your server.</p>
+        <div class="feature-badge">Open Source</div>
       </div>
     </div>
   </div>
