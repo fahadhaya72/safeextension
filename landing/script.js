@@ -129,35 +129,40 @@ document.addEventListener('DOMContentLoaded', () => {
     const details = data.details || {};
     const url = data.url || urlInput.value;
 
-    let html = `
-      <div class="card result-card">
-        <h3>🔍 Result for <span class="mono">${escapeHtml(url)}</span></h3>
-        <p style="margin: 12px 0;">
-          <strong>Safety Score:</strong> 
-          <span class="score ${getScoreClass(score)}">${score}/100</span>
-        </p>
-        <p style="margin: 8px 0;">
-          <strong>Recommendation:</strong> ${getActionDescription(action)}
-        </p>
-    `;
+    // Build HTML more efficiently using array join
+    const htmlParts = [
+      '<div class="card result-card">',
+        '<h3>🔍 Result for <span class="mono">' + escapeHtml(url) + '</span></h3>',
+        '<p style="margin: 12px 0;">',
+          '<strong>Safety Score:</strong> ',
+          '<span class="score ' + getScoreClass(score) + '">' + score + '/100</span>',
+        '</p>',
+        '<p style="margin: 8px 0;">',
+          '<strong>Recommendation:</strong> ' + getActionDescription(action),
+        '</p>'
+    ];
 
+    // Add details section if available
     if (Object.keys(details).length > 0) {
-      html += '<h4 style="margin: 12px 0 8px; font-size: 0.95rem;">Details:</h4><ul>';
+      htmlParts.push('<h4 style="margin: 12px 0 8px; font-size: 0.95rem;">Details:</h4><ul>');
+      
       if (details.domainAgeDays !== null && details.domainAgeDays !== undefined) {
-        html += `<li><strong>Domain Age:</strong> ${details.domainAgeDays} days</li>`;
+        htmlParts.push('<li><strong>Domain Age:</strong> ' + details.domainAgeDays + ' days</li>');
       }
       if (details.redirects !== undefined) {
-        html += `<li><strong>Redirects:</strong> ${details.redirects}</li>`;
+        htmlParts.push('<li><strong>Redirects:</strong> ' + details.redirects + '</li>');
       }
       if (details.safeBrowsing) {
         const sb = details.safeBrowsing;
-        html += `<li><strong>Safe Browsing:</strong> ${sb.listed ? '⚠️ Listed' : '✓ Clean'}</li>`;
+        htmlParts.push('<li><strong>Safe Browsing:</strong> ' + (sb.listed ? '⚠️ Listed' : '✓ Clean') + '</li>');
       }
-      html += '</ul>';
+      htmlParts.push('</ul>');
     }
 
-    html += '</div>';
-    resultBox.innerHTML = html;
+    htmlParts.push('</div>');
+    
+    // Single DOM update
+    resultBox.innerHTML = htmlParts.join('');
     resultBox.classList.remove('hidden');
   }
 
@@ -190,7 +195,12 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
         console.log('[SafeExtension] Normalized URL:', normalized);
+        const fetchStart = performance.now();
         console.log('[SafeExtension] Calling API at:', `${CONFIG.API_BASE}/check-url`);
+
+        // Add timeout to prevent hanging
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
         const response = await fetch(`${CONFIG.API_BASE}/check-url`, {
           method: 'POST',
@@ -199,8 +209,13 @@ document.addEventListener('DOMContentLoaded', () => {
             'x-api-key': CONFIG.API_KEY,
             'x-extension-id': CONFIG.EXTENSION_ID
           },
-          body: JSON.stringify({ url: normalized })
+          body: JSON.stringify({ url: normalized }),
+          signal: controller.signal
         });
+
+        clearTimeout(timeoutId);
+        const fetchEnd = performance.now();
+        console.log('[SafeExtension] API call completed in:', (fetchEnd - fetchStart).toFixed(2) + 'ms');
 
         console.log('[SafeExtension] API Response:', response.status);
 
@@ -208,13 +223,28 @@ document.addEventListener('DOMContentLoaded', () => {
           throw new Error(`HTTP ${response.status}`);
         }
 
+        // Optimize JSON parsing with timing
+        const parseStart = performance.now();
         const data = await response.json();
+        const parseEnd = performance.now();
+        console.log('[SafeExtension] API Data parsed in:', (parseEnd - parseStart).toFixed(2) + 'ms');
         console.log('[SafeExtension] API Data:', data);
+        
+        // Optimize rendering with timing
+        const renderStart = performance.now();
         renderResult(data);
+        const renderEnd = performance.now();
+        console.log('[SafeExtension] Result rendered in:', (renderEnd - renderStart).toFixed(2) + 'ms');
       } catch (err) {
         console.error('[SafeExtension] Error:', err);
         if (resultBox) {
-          resultBox.innerHTML = `<div class="card error">❌ ${escapeHtml(err.message || 'Failed to check URL')}</div>`;
+          let errorMessage = 'Failed to check URL';
+          if (err.name === 'AbortError') {
+            errorMessage = 'Request timed out - please try again';
+          } else if (err.message) {
+            errorMessage = err.message;
+          }
+          resultBox.innerHTML = `<div class="card error">❌ ${escapeHtml(errorMessage)}</div>`;
           resultBox.classList.remove('hidden');
         }
       } finally {
