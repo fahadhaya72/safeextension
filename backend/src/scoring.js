@@ -61,6 +61,25 @@ const SUSPICIOUS_KEYWORDS = [
   'password', 'credential', 'token', 'key', 'access', 'unlocked', 'restricted'
 ];
 
+// Adult content keywords - should be blocked
+const ADULT_CONTENT_KEYWORDS = [
+  'porn', 'pornhub', 'xxx', 'sex', 'adult', 'nsfw', 'erotic', 'hentai', 'onlyfans',
+  'playboy', 'xvideos', 'redtube', 'youporn', 'tube8', 'spankbang', 'eporner',
+  'chaturbate', 'bongacams', 'stripchat', 'camsoda', 'livejasmin', 'flirt4free',
+  'nude', 'naked', 'hardcore', 'softcore', 'fetish', 'bdsm', 'orgy', 'escort',
+  'whore', 'slut', 'pussy', 'dick', 'cock', 'tits', 'boobs', 'ass', 'anal',
+  'blowjob', 'handjob', 'masturbat', 'fuck', 'shit', 'cum', 'sperm', 'penis',
+  'vagina', 'clit', 'breast', 'nipple', 'lesbian', 'gay', 'bisexual', 'threesome'
+];
+
+// Adult content domains - immediate block
+const ADULT_CONTENT_DOMAINS = [
+  'pornhub.com', 'xvideos.com', 'xhamster.com', 'youporn.com', 'redtube.com',
+  'tube8.com', 'spankbang.com', 'eporner.com', 'chaturbate.com', 'bongacams.com',
+  'stripchat.com', 'camsoda.com', 'livejasmin.com', 'flirt4free.com', 'onlyfans.com',
+  'playboy.com', 'playboyplus.com', 'hentaihaven.com', 'nhentai.net', 'hentai2read.com'
+];
+
 export function isValidUrl(url) {
   try {
     const u = new URL(url);
@@ -409,6 +428,7 @@ export function computeAdvancedScore(basicFactors, advancedFactors) {
   if (basicFactors.youngDomain) { deductions += 20; reasons.push({ code: 'YOUNG_DOMAIN', points: 20 }); }
   if (basicFactors.listedInFeeds) { deductions += 50; reasons.push({ code: 'LISTED_IN_FEEDS', points: 50 }); }
   if (basicFactors.suspiciousKeywords) { deductions += 12; reasons.push({ code: 'SUSPICIOUS_KEYWORDS', points: 12 }); }
+  if (basicFactors.adultContent) { deductions += 60; reasons.push({ code: 'ADULT_CONTENT', points: 60 }); }
   if (basicFactors.excessiveRedirects) { deductions += 8; reasons.push({ code: 'EXCESSIVE_REDIRECTS', points: 8 }); }
   if (basicFactors.ipObfuscation) { deductions += 35; reasons.push({ code: 'IP_OBFUSCATION', points: 35 }); }
   if (basicFactors.temporaryService) { deductions += 25; reasons.push({ code: 'TEMPORARY_SERVICE', points: 25 }); }
@@ -477,4 +497,17 @@ export function classify(score) {
 export function hasSuspiciousKeywords(url) {
   const lower = url.toLowerCase();
   return SUSPICIOUS_KEYWORDS.some(k => lower.includes(k));
+}
+
+export function hasAdultContent(url) {
+  const lower = url.toLowerCase();
+  
+  // Check for adult content domains
+  const domain = lower.replace(/^https?:\/\//, '').split('/')[0];
+  if (ADULT_CONTENT_DOMAINS.some(d => domain === d || domain.endsWith('.' + d))) {
+    return true;
+  }
+  
+  // Check for adult content keywords
+  return ADULT_CONTENT_KEYWORDS.some(k => lower.includes(k));
 }

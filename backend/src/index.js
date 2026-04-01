@@ -12,6 +12,7 @@ import {
   computeScore, 
   classify, 
   hasSuspiciousKeywords, 
+  hasAdultContent,
   isValidUrl, 
   isIpObfuscation, 
   isTemporaryService, 
@@ -244,6 +245,7 @@ app.post('/api/check-url', async (req, res) => {
     const basicFactors = {
       noHttps: syntax.protocol !== 'https',
       suspiciousKeywords: hasSuspiciousKeywords(normalizedUrl),
+      adultContent: hasAdultContent(normalizedUrl),
       ipObfuscation: isIpObfuscation(syntax.hostname),
       temporaryService: isTemporaryService(syntax.hostname),
       suspiciousSubdomain: hasSuspiciousSubdomain(syntax.hostname)
@@ -332,6 +334,7 @@ app.post('/api/risk-details', async (req, res) => {
     const basicFactors = {
       noHttps: syntax.protocol !== 'https',
       suspiciousKeywords: hasSuspiciousKeywords(normalizedUrl),
+      adultContent: hasAdultContent(normalizedUrl),
       ipObfuscation: isIpObfuscation(syntax.hostname),
       temporaryService: isTemporaryService(syntax.hostname),
       suspiciousSubdomain: hasSuspiciousSubdomain(syntax.hostname)
