@@ -1,7 +1,7 @@
 // Content Script for SafeExtension
 // Runs on web pages to detect and highlight suspicious links
 
-const API_BASE_URL = 'http://localhost:4000/api';
+const API_BASE_URL = 'https://safeextension-backend.onrender.com/api';
 const CACHE_TIME = 10 * 60 * 1000; // 10 minutes
 
 class ContentScriptChecker {

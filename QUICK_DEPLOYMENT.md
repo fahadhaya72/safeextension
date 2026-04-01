@@ -36,9 +36,9 @@ Edit both `popup.js` and `background.js`:
 
 ```javascript
 const CONFIG = {
-  API_BASE_URL: 'https://your-app-name.onrender.com/api', // Your Render URL
-  API_KEY: 'a1b2c3d4e5f6789012345678901234567890abcdef', // Your API key
-  EXTENSION_ID: 'abcdefghijklmnopabcdefghijklmnop' // Your extension ID
+  API_BASE_URL: 'https://safeextension-backend.onrender.com/api', // Production backend URL
+  API_KEY: '20d429b06738d8a1d48ac296048b747259bf0993d9d9f3e951901dac69a21625', // Production API key
+  EXTENSION_ID: 'your_extension_id_here' // Your extension ID
 };
 ```
 

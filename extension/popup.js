@@ -1,8 +1,8 @@
 // 🔐 CONFIGURATION - Replace with your actual values
 const CONFIG = {
-  // IMPORTANT: Replace with your actual backend URL and API key
-  API_BASE_URL: 'https://your-backend-url.onrender.com/api', // Replace with your backend URL
-  API_KEY: 'your_secure_api_key_here', // Replace with your actual API key
+  // IMPORTANT: Replace with your actual values
+  API_BASE_URL: 'https://safeextension-backend.onrender.com/api', // Production backend URL
+  API_KEY: '20d429b06738d8a1d48ac296048b747259bf0993d9d9f3e951901dac69a21625', // Production API key
   EXTENSION_ID: 'your_extension_id_here' // Replace with your actual extension ID
 };
 
