@@ -2,14 +2,13 @@
 
 ## ⚠️ NOT FOR PRODUCTION USE
 
-This is a **development/educational project** with serious security vulnerabilities:
+This is a **development/educational project** with security considerations:
 
 ### 🚫 **DO NOT USE IN PRODUCTION**
-- ❌ **Hardcoded Backend URL** - Exposed to attacks
-- ❌ **No API Authentication** - Anyone can abuse your backend
-- ❌ **Missing Security Hardening** - Vulnerable to exploitation
-- ❌ **URL Logging** - May log sensitive URLs for debugging
-- ❌ **No Rate Limiting per User** - Easy to DDoS
+- ❌ **Security Hardening Required** - Additional security measures needed
+- ❌ **Authentication Required** - Proper authentication system needed
+- ❌ **Rate Limiting** - Per-user rate limiting recommended
+- ❌ **Privacy Policy** - User data handling documentation required
 
 ### ✅ **WHAT THIS IS**
 - 📚 **Educational Project** - Learn browser extension development
@@ -171,15 +170,6 @@ safeextension/
 - **Chrome/Edge** 90+ or **Firefox** 88+ (with compatibility)
 - For development: Chrome/Chromium with Developer Mode enabled
 
-### API Keys Required
-1. **Google Safe Browsing API Key**
-   - Get it from: https://console.cloud.google.com/
-   - Enable the "Safe Browsing API"
-
-2. **API Ninjas WHOIS API Key** (Optional but recommended)
-   - Get it from: https://api-ninjas.com/api/whois
-   - Provides more accurate domain age detection
-
 ---
 
 ## 🚀 Installation
@@ -207,8 +197,6 @@ safeextension/
    PORT=4000
    NODE_ENV=development
    ALLOWED_ORIGIN=http://localhost:3000
-   SAFE_BROWSING_API_KEY=your_api_key_here
-   WHOIS_NINJA_API_KEY=your_api_key_here
    ```
 
 ### Extension Setup
@@ -227,19 +215,16 @@ safeextension/
 
 ---
 
-## 🔐 API AUTHENTICATION REQUIREMENTS
+## 🔐 Security Implementation
 
-### ⚠️ **CRITICAL: Current Version Has NO Authentication**
+### Authentication Requirements
 
 **Current Status:**
-- ❌ **No API Keys Required** - Anyone can call your backend
-- ❌ **No Rate Limiting per User** - Easy to abuse/DoS
-- ❌ **No Extension Validation** - Any client can make requests
-- ❌ **CORS Set to \*** - Allows any origin
+- ⚠️ **Development Configuration** - Requires production security measures
 
 ### **🚨 BEFORE PRODUCTION - Must Implement:**
 
-#### 1. **API Key Authentication**
+#### 1. **API Authentication**
 ```javascript
 // Required in production
 const API_KEY = process.env.SAFEEXTENSION_API_KEY;
@@ -275,10 +260,9 @@ const token = jwt.sign({ extensionId: EXTENSION_ID }, JWT_SECRET);
 #### 4. **Environment Variables for Production**
 ```env
 # Add to .env for production
-SAFEEXTENSION_API_KEY=your_secure_api_key_here
-CHROME_EXTENSION_ID=your_extension_id_here
-JWT_SECRET=your_jwt_secret_here
-ALLOWED_ORIGIN=chrome-extension://your_extension_id
+SAFEEXTENSION_API_KEY=[your_secure_key]
+CHROME_EXTENSION_ID=[your_extension_id]
+ALLOWED_ORIGIN=[your_domain]
 ```
 
 ### **Security Headers Required:**
@@ -402,8 +386,8 @@ npm start
 
 2. **Configure API keys** in `.env`:
    ```env
-   SAFE_BROWSING_API_KEY=your_key_here
-   WHOIS_NINJA_API_KEY=your_key_here
+   SAFE_BROWSING_API_KEY=[your_key]
+   WHOIS_NINJA_API_KEY=[your_key]
    ```
 
 3. **Build and run:**
@@ -427,8 +411,8 @@ npm start
 ```bash
 docker build -t safeextension:latest -f backend/Dockerfile .
 docker run -p 4000:4000 \
-  -e SAFE_BROWSING_API_KEY=your_key \
-  -e WHOIS_NINJA_API_KEY=your_key \
+  -e SAFE_BROWSING_API_KEY=[your_key] \
+  -e WHOIS_NINJA_API_KEY=[your_key] \
   safeextension:latest
 ```
 
@@ -703,7 +687,7 @@ netstat -ano | findstr :4000  # Windows
 
 **Solution:**
 1. Ensure backend is running: `http://localhost:4000/api/health`
-2. Check `popup.js` - API_BASE_URL should be `http://localhost:4000/api`
+2. Check extension configuration
 3. Disable CORS issues for development (using ALLOWED_ORIGIN=*)
 4. Check browser console for CORS errors
 
@@ -736,41 +720,30 @@ netstat -ano | findstr :4000  # Windows
 
 ### ❌ CRITICAL - Before Production Release:
 
-1. **Never Expose Backend URL**
-   - Remove hardcoded 'safeextension-backend.onrender.com'
-   - Use a custom domain
-   - Implement API key authentication
+1. **Security Hardening Required**
+   - Implement proper authentication system
+   - Use secure domain configuration
+   - Add rate limiting per user
 
 2. **Extension Permissions Audit**
    - Justify `<all_urls>` permission
    - Consider restricting to http(s) only
    - Add privacy policy for monitoring all sites
 
-3. **Automatic Blocking Disclosure**
-   - Clearly warn users that extension auto-blocks dangerous sites
-   - Provide easy unblock mechanism (✓ already done)
-   - Log blocking decisions
-
-4. **Data Logging & Privacy**
-   - Do you log URLs being checked?
-   - Do you store user data on backend?
-   - Add privacy policy mentioning URL checking
-
-5. **Extension Store Submission**
-   - Add privacy policy.html
-   - Disclose all permissions in store listing
-   - Get code review before publishing to Chrome Web Store
+3. **Privacy & Data Handling**
+   - Document what data is collected
+   - Add privacy policy for URL checking
+   - Implement user consent mechanisms
 
 ### 🚨 Production Security Requirements
 
 | Requirement | Status | Priority |
 |-------------|--------|----------|
-| API Authentication | ❌ Missing | **Critical** |
-| Custom Domain | ❌ Missing | **Critical** |
-| CORS Restriction | ❌ Missing | **Critical** |
-| Per-Extension Rate Limiting | ❌ Missing | **High** |
+| Authentication System | ⚠️ Development Only | **Critical** |
+| Secure Domain | ⚠️ Development Only | **Critical** |
+| Rate Limiting | ⚠️ Basic Only | **High** |
 | Privacy Policy | ❌ Missing | **High** |
-| Extension Store Review | ❌ Missing | **Medium** |
+| Security Audit | ❌ Missing | **Medium** |
 
 ---
 
@@ -780,8 +753,8 @@ netstat -ano | findstr :4000  # Windows
 
 #### **🚫 BLOCKERS - Must Fix Before Submission**
 - ❌ **Privacy Policy** - Add `privacy_policy.html` file
-- ❌ **API Authentication** - Implement secure backend authentication
-- ❌ **Hardcoded URLs** - Remove all hardcoded backend URLs
+- ❌ **Security Hardening** - Implement production-ready authentication
+- ❌ **Secure Configuration** - Remove development settings
 - ❌ **Security Audit** - Professional security review required
 - ❌ **Permission Justification** - Document why each permission is needed
 
@@ -908,15 +881,14 @@ For educational and development purposes only.
 
 Before releasing to Chrome Web Store or users:
 
-- [ ] Remove hardcoded backend URL (safeextension-backend.onrender.com)
-- [ ] Implement API key/JWT authentication
-- [ ] Set CORS to specific domain only (not *)
-- [ ] Implement per-extension-instance rate limiting
+- [ ] Implement production authentication system
+- [ ] Configure secure domain settings
+- [ ] Add proper rate limiting
 - [ ] Add privacy policy (explain URL monitoring)
 - [ ] Document automatic blocking behavior clearly
 - [ ] Add "Report False Positive" feature
-- [ ] Implement request signing/validation
-- [ ] Set up logging for security events
+- [ ] Implement request validation
+- [ ] Set up security logging
 - [ ] Security audit of manifest permissions
 
 ### Current Limitations
@@ -925,10 +897,9 @@ This project is **suitable for personal/development use only**. For production:
 
 | Issue | Impact | Solution |
 |-------|--------|----------|
-| Hardcoded backend URL | High | Use authenticated API with custom domain |
-| No request authentication | High | Implement JWT or API key system |
-| CORS=* | High | Restrict to extension domain |
-| Global rate limit | Medium | Per-extension rate limiting |
+| Development configuration | High | Implement production security measures |
+| Basic authentication | High | Implement robust authentication system |
+| Basic rate limiting | Medium | Per-user rate limiting |
 | `<all_urls>` permission | Medium | Add privacy policy & user consent |
 
 ### Post-Launch Monitoring
@@ -943,11 +914,11 @@ After release:
 
 ## 🔐 Backend Security Implementation
 
-### Current Status: ⚠️ Development Only
+### Current Status: ⚠️ Development Configuration
 
 The current backend is configured for **development use only**. Before production:
 
-#### 1. API Authentication (REQUIRED)
+#### 1. Authentication System (REQUIRED)
 ```javascript
 // Add JWT token validation in backend/src/index.js
 app.use('/api/', (req, res, next) => {
