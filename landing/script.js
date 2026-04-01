@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ===== URL CHECK FORM =====
   const CONFIG = {
-    API_BASE: 'https://your-app-name.onrender.com/api', // Replace with your Render URL
+    API_BASE: 'https://safeextension-backend.onrender.com/api', // Production backend URL
     API_KEY: '20d429b06738d8a1d48ac296048b747259bf0993d9d9f3e951901dac69a21625' // Your API key
   };
   
