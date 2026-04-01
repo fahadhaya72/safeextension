@@ -404,31 +404,31 @@ export function computeAdvancedScore(basicFactors, advancedFactors) {
   let deductions = 0;
   const reasons = [];
   
-  // Include basic factors
-  if (basicFactors.noHttps) { deductions += 20; reasons.push({ code: 'NO_HTTPS', points: 20 }); }
-  if (basicFactors.youngDomain) { deductions += 25; reasons.push({ code: 'YOUNG_DOMAIN', points: 25 }); }
+  // Include basic factors (reduced weights for better accuracy)
+  if (basicFactors.noHttps) { deductions += 15; reasons.push({ code: 'NO_HTTPS', points: 15 }); }
+  if (basicFactors.youngDomain) { deductions += 20; reasons.push({ code: 'YOUNG_DOMAIN', points: 20 }); }
   if (basicFactors.listedInFeeds) { deductions += 50; reasons.push({ code: 'LISTED_IN_FEEDS', points: 50 }); }
-  if (basicFactors.suspiciousKeywords) { deductions += 15; reasons.push({ code: 'SUSPICIOUS_KEYWORDS', points: 15 }); }
-  if (basicFactors.excessiveRedirects) { deductions += 10; reasons.push({ code: 'EXCESSIVE_REDIRECTS', points: 10 }); }
-  if (basicFactors.ipObfuscation) { deductions += 40; reasons.push({ code: 'IP_OBFUSCATION', points: 40 }); }
-  if (basicFactors.temporaryService) { deductions += 30; reasons.push({ code: 'TEMPORARY_SERVICE', points: 30 }); }
-  if (basicFactors.suspiciousSubdomain) { deductions += 20; reasons.push({ code: 'SUSPICIOUS_SUBDOMAIN', points: 20 }); }
+  if (basicFactors.suspiciousKeywords) { deductions += 12; reasons.push({ code: 'SUSPICIOUS_KEYWORDS', points: 12 }); }
+  if (basicFactors.excessiveRedirects) { deductions += 8; reasons.push({ code: 'EXCESSIVE_REDIRECTS', points: 8 }); }
+  if (basicFactors.ipObfuscation) { deductions += 35; reasons.push({ code: 'IP_OBFUSCATION', points: 35 }); }
+  if (basicFactors.temporaryService) { deductions += 25; reasons.push({ code: 'TEMPORARY_SERVICE', points: 25 }); }
+  if (basicFactors.suspiciousSubdomain) { deductions += 15; reasons.push({ code: 'SUSPICIOUS_SUBDOMAIN', points: 15 }); }
   
-  // Add advanced factors
+  // Add advanced factors (reduced weights)
   if (advancedFactors.brandImpersonation?.detected) {
-    const points = Math.round(45 * (advancedFactors.brandImpersonation.confidence / 100));
+    const points = Math.round(35 * (advancedFactors.brandImpersonation.confidence / 100));
     deductions += points;
     reasons.push({ code: 'BRAND_IMPERSONATION', points, brand: advancedFactors.brandImpersonation.brand });
   }
   
   if (advancedFactors.suspiciousTLD) {
-    deductions += 20;
-    reasons.push({ code: 'SUSPICIOUS_TLD', points: 20 });
+    deductions += 15;
+    reasons.push({ code: 'SUSPICIOUS_TLD', points: 15 });
   }
   
   if (advancedFactors.urlStructure?.score > 0) {
-    deductions += advancedFactors.urlStructure.score;
-    reasons.push({ code: 'SUSPICIOUS_STRUCTURE', points: advancedFactors.urlStructure.score });
+    deductions += Math.round(advancedFactors.urlStructure.score * 0.7);
+    reasons.push({ code: 'SUSPICIOUS_STRUCTURE', points: Math.round(advancedFactors.urlStructure.score * 0.7) });
   }
   
   if (advancedFactors.geographicRisk?.score > 0) {
@@ -442,7 +442,7 @@ export function computeAdvancedScore(basicFactors, advancedFactors) {
   }
   
   if (advancedFactors.reputation?.score < 60) {
-    const points = 60 - advancedFactors.reputation.score;
+    const points = Math.round((60 - advancedFactors.reputation.score) * 0.5); // Reduced by 50%
     deductions += points;
     reasons.push({ code: 'LOW_REPUTATION', points, reputationScore: advancedFactors.reputation.score });
   }

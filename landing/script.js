@@ -58,7 +58,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // ===== URL CHECK FORM =====
   const CONFIG = {
     API_BASE: 'https://safeextension-backend.onrender.com/api', // Production backend URL
-    API_KEY: '20d429b06738d8a1d48ac296048b747259bf0993d9d9f3e951901dac69a21625' // Your API key
+    API_KEY: '20d429b06738d8a1d48ac296048b747259bf0993d9d9f3e951901dac69a21625', // Your API key
+    EXTENSION_ID: 'web' // Web frontend identifier
   };
   
   const form = document.getElementById('landing-check-form');
@@ -195,7 +196,8 @@ document.addEventListener('DOMContentLoaded', () => {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
-            'x-api-key': CONFIG.API_KEY
+            'x-api-key': CONFIG.API_KEY,
+            'x-extension-id': CONFIG.EXTENSION_ID
           },
           body: JSON.stringify({ url: normalized })
         });

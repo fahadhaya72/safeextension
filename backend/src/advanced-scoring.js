@@ -39,12 +39,32 @@ const SUSPICIOUS_TLDS = [
 const HIGH_RISK_COUNTRIES = ['CN', 'RU', 'KP', 'IR', 'NG', 'PK', 'BD'];
 const MEDIUM_RISK_COUNTRIES = ['ID', 'PH', 'VN', 'TH', 'MY', 'UA'];
 
+// Trusted domains that should never be flagged
+const TRUSTED_DOMAINS = [
+  'google.com', 'google.co', 'google.uk', 'google.ca',
+  'facebook.com', 'microsoft.com', 'apple.com', 'amazon.com',
+  'netflix.com', 'paypal.com', 'instagram.com', 'twitter.com', 'linkedin.com'
+];
+
 // Advanced pattern detection
 export function detectBrandImpersonation(hostname) {
   if (!hostname) return { detected: false, brand: null, confidence: 0 };
   
   const lowerHostname = hostname.toLowerCase();
+  const cleanHostname = lowerHostname.replace(/^www\./, '');
   
+  // Immediate check for major trusted domains
+  if (cleanHostname === 'google.com' || cleanHostname === 'facebook.com' || 
+      cleanHostname === 'microsoft.com' || cleanHostname === 'apple.com') {
+    return { detected: false, reason: 'trusted_domain' };
+  }
+  
+  // Skip trusted domains entirely - FIRST PRIORITY
+  if (TRUSTED_DOMAINS.includes(cleanHostname)) {
+    return { detected: false, reason: 'trusted_domain' };
+  }
+  
+  // Only check patterns for non-trusted domains
   for (const [brand, patterns] of Object.entries(BRAND_PATTERNS)) {
     for (const pattern of patterns) {
       if (pattern.test(lowerHostname)) {
