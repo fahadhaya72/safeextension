@@ -373,6 +373,88 @@ The system detects various suspicious patterns including:
 
 ---
 
+## 🚨 SECURITY WARNING - Not for Production
+
+### ⚠️ Exposed Backend Endpoint
+The current extension contains a hardcoded production backend URL. This should NEVER be used in production because:
+- ✗ Backend is exposed to direct attacks
+- ✗ No API key authentication
+- ✗ Vulnerable to DDoS attacks
+- ✗ Rate limiting (60 req/min) can be easily exhausted
+
+### What You MUST Do Before Production Release:
+1. **Add API Authentication**
+   - Implement OAuth/API keys for extension
+   - Sign extension requests with tokens
+   
+2. **Use a Custom Domain (Not Public)**
+   - Don't use Render.com public URLs
+   - Use your own domain with authentication
+   
+3. **Implement Extension-Specific Auth**
+   - Chrome Extension ID validation
+   - JWT tokens for requests
+   
+4. **Backend Security Hardening**
+   - IP whitelisting (if possible)
+   - Require valid extension signatures
+   - Strict CORS headers (not *)
+
+---
+
+## 🔐 Extension Permissions & Privacy
+
+### Permission Rationale
+
+| Permission | Purpose | Risk Level |
+|-----------|---------|-----------|
+| `activeTab` | Access current tab URL | Low |
+| `scripting` | Inject content scripts | Medium |
+| `tabs` | Access tab information | Medium |
+| `webRequest` | Monitor redirects | Medium |
+| `storage` | Store blocked domains | Low |
+| `<all_urls>` | Monitor all websites | **HIGH** |
+
+### Important Privacy Note:
+⚠️ This extension monitors ALL websites you visit. It only sends URLs to the backend for analysis—NO cookies, passwords, or personal data are captured. However, you should only trust this extension if:
+- You understand it runs on all websites
+- You trust the developer (Fahad)
+- You have reviewed the source code
+
+---
+
+## 🚫 Automatic Blocking Behavior
+
+### When Your Extension Blocks Sites:
+
+1. **Score < 10 (Critical Risk)**
+   - Automatically redirects to blocking page
+   - User can click "Unblock for this session" or permanently unblock
+   - Domain added to blocklist (stored locally)
+
+2. **Score 10-40 (High Risk)**
+   - Shows warning overlay on page
+   - User can proceed anyway or go back
+
+3. **Score 40-90 (Medium Risk)**
+   - Shows alert in extension popup
+   - No automatic action
+
+4. **Score 90+ (Safe)**
+   - No warning or blocking
+
+### To Unblock a Site:
+- Open extension popup
+- Go to "Blocked Sites" tab
+- Click "Unblock" next to the domain
+
+### Important:
+- Blocked domains are stored **locally in your browser**
+- Blocking decisions are made by SafeExtension's algorithm
+- False positives are possible—always review before trusting
+
+---
+
 ## 🧪 Testing
 
 ### Manual Testing
@@ -449,16 +531,130 @@ netstat -ano | findstr :4000  # Windows
 
 ## 🔐 Security Considerations
 
-1. **API Keys**: Never commit `.env` file with real keys
-2. **CORS**: Restrict `ALLOWED_ORIGIN` in production
-3. **HTTPS**: Always use HTTPS in production
-4. **Rate Limiting**: Default 60 requests/minute per IP
-5. **Input Validation**: All inputs sanitized and validated
-6. **Error Handling**: No sensitive info in error messages
+### ✅ Current Implementation
+- **API Keys**: Never commit `.env` file with real keys
+- **CORS**: Restrict `ALLOWED_ORIGIN` in production
+- **HTTPS**: Always use HTTPS in production
+- **Rate Limiting**: Default 60 requests/minute per IP
+- **Input Validation**: All inputs sanitized and validated
+- **Error Handling**: No sensitive info in error messages
+
+### ❌ CRITICAL - Before Production Release:
+
+1. **Never Expose Backend URL**
+   - Remove hardcoded 'safeextension-backend.onrender.com'
+   - Use a custom domain
+   - Implement API key authentication
+
+2. **Extension Permissions Audit**
+   - Justify `<all_urls>` permission
+   - Consider restricting to http(s) only
+   - Add privacy policy for monitoring all sites
+
+3. **Automatic Blocking Disclosure**
+   - Clearly warn users that extension auto-blocks dangerous sites
+   - Provide easy unblock mechanism (✓ already done)
+   - Log blocking decisions
+
+4. **Data Logging & Privacy**
+   - Do you log URLs being checked?
+   - Do you store user data on backend?
+   - Add privacy policy mentioning URL checking
+
+5. **Extension Store Submission**
+   - Add privacy policy.html
+   - Disclose all permissions in store listing
+   - Get code review before publishing to Chrome Web Store
+
+### 🚨 Production Security Requirements
+
+| Requirement | Status | Priority |
+|-------------|--------|----------|
+| API Authentication | ❌ Missing | **Critical** |
+| Custom Domain | ❌ Missing | **Critical** |
+| CORS Restriction | ❌ Missing | **Critical** |
+| Per-Extension Rate Limiting | ❌ Missing | **High** |
+| Privacy Policy | ❌ Missing | **High** |
+| Extension Store Review | ❌ Missing | **Medium** |
 
 ---
 
-## 📦 Building for Production
+## � Production Deployment Security Checklist
+
+### ❌ DO NOT Ship With Current Setup
+
+Before releasing to Chrome Web Store or users:
+
+- [ ] Remove hardcoded backend URL (safeextension-backend.onrender.com)
+- [ ] Implement API key/JWT authentication
+- [ ] Set CORS to specific domain only (not *)
+- [ ] Implement per-extension-instance rate limiting
+- [ ] Add privacy policy (explain URL monitoring)
+- [ ] Document automatic blocking behavior clearly
+- [ ] Add "Report False Positive" feature
+- [ ] Implement request signing/validation
+- [ ] Set up logging for security events
+- [ ] Security audit of manifest permissions
+
+### Current Limitations
+
+This project is **suitable for personal/development use only**. For production:
+
+| Issue | Impact | Solution |
+|-------|--------|----------|
+| Hardcoded backend URL | High | Use authenticated API with custom domain |
+| No request authentication | High | Implement JWT or API key system |
+| CORS=* | High | Restrict to extension domain |
+| Global rate limit | Medium | Per-extension rate limiting |
+| `<all_urls>` permission | Medium | Add privacy policy & user consent |
+
+### Post-Launch Monitoring
+
+After release:
+- Monitor false positive reports
+- Track scoring accuracy
+- Watch for backend attacks
+- Collect user feedback on blocking accuracy
+
+---
+
+## 🔐 Backend Security Implementation
+
+### Current Status: ⚠️ Development Only
+
+The current backend is configured for **development use only**. Before production:
+
+#### 1. API Authentication (REQUIRED)
+```javascript
+// Add JWT token validation in backend/src/index.js
+app.use('/api/', (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token || !verifyToken(token)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
+});
+```
+
+#### 2. CORS Hardening (REQUIRED)
+```env
+# Current (UNSAFE)
+ALLOWED_ORIGIN=*
+
+# Production (SAFE)
+ALLOWED_ORIGIN=https://yourdomain.com
+```
+
+#### 3. Rate Limiting by User (REQUIRED)
+- Current: 60 req/min global
+- Should be: 10-20 req/min per extension ID
+
+#### 4. Extension Signature Validation (RECOMMENDED)
+Verify that requests come from your official extension, not a cloned version.
+
+---
+
+## �� Building for Production
 
 ### Backend Deployment
 
