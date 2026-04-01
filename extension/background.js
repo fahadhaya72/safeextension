@@ -1,7 +1,12 @@
 // Background Service Worker for SafeExtension
 // Handles messages and communicates between content scripts and popup
 
-const API_BASE_URL = 'https://safeextension-backend.onrender.com/api';
+// 🔐 CONFIGURATION - Replace with your actual values
+const CONFIG = {
+  API_BASE_URL: 'https://your-backend-url.onrender.com/api', // Replace with your backend URL
+  API_KEY: 'your_secure_api_key_here', // Replace with your actual API key
+  EXTENSION_ID: 'your_extension_id_here' // Replace with your actual extension ID
+};
 
 // Listen for messages from content scripts and popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -15,19 +20,30 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 async function checkURL(url) {
   try {
-    const response = await fetch(`${API_BASE_URL}/check-url`, {
+    const response = await fetch(`${CONFIG.API_BASE_URL}/check-url`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': CONFIG.API_KEY,
+        'x-extension-id': CONFIG.EXTENSION_ID
+      },
       body: JSON.stringify({ url })
     });
 
     if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+      if (response.status === 401) {
+        throw new Error('Invalid API key - please check configuration');
+      } else if (response.status === 403) {
+        throw new Error('Invalid extension ID - please check configuration');
+      } else if (response.status === 429) {
+        throw new Error('Rate limit exceeded - please try again later');
+      }
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
     return await response.json();
   } catch (error) {
-    console.error('Background check error:', error);
+    console.error('Background API Error:', error);
     throw error;
   }
 }

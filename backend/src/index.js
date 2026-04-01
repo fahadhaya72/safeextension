@@ -7,7 +7,23 @@ import morgan from 'morgan';
 import fetch from 'node-fetch';
 import { cache } from './cache.js';
 import logger from './logger.js';
-import { analyzeUrlSyntax, computeScore, classify, hasSuspiciousKeywords, isValidUrl, isIpObfuscation, isTemporaryService, hasSuspiciousSubdomain } from './scoring.js';
+import { 
+  analyzeUrlSyntax, 
+  computeScore, 
+  classify, 
+  hasSuspiciousKeywords, 
+  isValidUrl, 
+  isIpObfuscation, 
+  isTemporaryService, 
+  hasSuspiciousSubdomain,
+  computeAdvancedScore,
+  detectBrandImpersonation,
+  hasSuspiciousTLD,
+  analyzeURLStructure,
+  getGeographicRisk,
+  analyzeCertificate,
+  getReputationScore
+} from './scoring.js';
 import { checkSafeBrowsing } from './services/safebrowsing.js';
 import { getDomainAgeDays } from './services/whois.js';
 
@@ -15,13 +31,77 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || '*';
 const MAX_URL_LENGTH = 2048;
+const API_KEY = process.env.SAFEEXTENSION_API_KEY;
+const EXTENSION_ID = process.env.CHROME_EXTENSION_ID;
 
-app.use(helmet());
-app.use(express.json());
-app.use(cors({ origin: ALLOWED_ORIGIN === '*' ? true : ALLOWED_ORIGIN }));
+// Security middleware with enhanced headers
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  }
+}));
+
+app.use(express.json({ limit: '10mb' }));
+app.use(cors({ 
+  origin: ALLOWED_ORIGIN === '*' ? true : ALLOWED_ORIGIN,
+  credentials: true
+}));
 app.use(morgan('combined'));
 
-const limiter = rateLimit({ windowMs: 60 * 1000, max: 60 });
+// API Authentication Middleware
+app.use('/api/', (req, res, next) => {
+  // Skip authentication for health check
+  if (req.path === '/health') return next();
+  
+  const providedKey = req.headers['x-api-key'];
+  const providedExtensionId = req.headers['x-extension-id'];
+  
+  // Check API key
+  if (!API_KEY || providedKey !== API_KEY) {
+    logger.warn({ ip: req.ip, userAgent: req.get('User-Agent') }, 'Unauthorized API access attempt');
+    return res.status(401).json({ 
+      error: 'unauthorized',
+      message: 'Valid API key required' 
+    });
+  }
+  
+  // Check extension ID (if configured)
+  if (EXTENSION_ID && providedExtensionId !== EXTENSION_ID) {
+    logger.warn({ ip: req.ip, extensionId: providedExtensionId }, 'Invalid extension ID');
+    return res.status(403).json({ 
+      error: 'forbidden',
+      message: 'Invalid extension ID' 
+    });
+  }
+  
+  next();
+});
+
+// Enhanced rate limiting per API key
+const limiter = rateLimit({ 
+  windowMs: 60 * 1000, 
+  max: 30, // Reduced from 60 to 30 for security
+  message: { 
+    error: 'rate_limit_exceeded', 
+    message: 'Too many requests, please try again later' 
+  },
+  keyGenerator: (req) => {
+    return req.headers['x-api-key'] || req.ip;
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 app.use('/api/', limiter);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
@@ -46,8 +126,8 @@ async function checkRedirects(url) {
   }
 }
 
-function responseFromFactors(url, factors, extra) {
-  const { score, classification, reasons } = computeScore(factors);
+function responseFromFactors(url, basicFactors, advancedFactors, extra) {
+  const { score, classification, reasons } = computeAdvancedScore(basicFactors, advancedFactors);
   const action = classify(score);
   return {
     url,
@@ -55,8 +135,36 @@ function responseFromFactors(url, factors, extra) {
     action,
     risk_classification: classification,
     risk_factors: reasons,
-    details: extra
+    details: {
+      ...extra,
+      advanced: {
+        brandImpersonation: advancedFactors.brandImpersonation,
+        geographicRisk: advancedFactors.geographicRisk,
+        reputation: advancedFactors.reputation,
+        certificate: advancedFactors.certificate,
+        urlStructure: advancedFactors.urlStructure
+      }
+    },
+    metadata: {
+      analysis_version: 'advanced',
+      timestamp: new Date().toISOString(),
+      confidence: calculateConfidence(score, reasons.length)
+    }
   };
+}
+
+// Calculate confidence score
+function calculateConfidence(score, factorCount) {
+  let confidence = 50; // Base confidence
+  
+  // Higher confidence for extreme scores
+  if (score < 20 || score > 90) confidence += 20;
+  else if (score < 40 || score > 80) confidence += 10;
+  
+  // More factors = higher confidence
+  confidence += Math.min(30, factorCount * 3);
+  
+  return Math.min(100, Math.round(confidence));
 }
 
 app.post('/api/check-url', async (req, res) => {
@@ -97,34 +205,47 @@ app.post('/api/check-url', async (req, res) => {
       return res.json(cached);
     }
 
+    // Basic analysis
     const syntax = analyzeUrlSyntax(normalizedUrl);
-    const noHttps = syntax.protocol !== 'https';
-    const suspicious = hasSuspiciousKeywords(normalizedUrl);
-    const ipObfuscation = isIpObfuscation(syntax.hostname);
-    const temporaryService = isTemporaryService(syntax.hostname);
-    const suspiciousSubdomain = hasSuspiciousSubdomain(syntax.hostname);
-
-    const [sb, domainAgeDays, redirects] = await Promise.all([
-      checkSafeBrowsing(normalizedUrl),
-      getDomainAgeDays(normalizedUrl),
-      checkRedirects(normalizedUrl)
-    ]);
-
-    const factors = {
-      noHttps,
-      youngDomain: (domainAgeDays !== null) ? domainAgeDays < 180 : false,
-      ipObfuscation,
-      listedInFeeds: !!sb.listed,
-      suspiciousKeywords: suspicious,
-      excessiveRedirects: redirects.excessive,
-      temporaryService,
-      suspiciousSubdomain
+    const basicFactors = {
+      noHttps: syntax.protocol !== 'https',
+      suspiciousKeywords: hasSuspiciousKeywords(normalizedUrl),
+      ipObfuscation: isIpObfuscation(syntax.hostname),
+      temporaryService: isTemporaryService(syntax.hostname),
+      suspiciousSubdomain: hasSuspiciousSubdomain(syntax.hostname)
     };
 
-    const result = responseFromFactors(normalizedUrl, factors, {
+    // Advanced analysis (parallel execution)
+    const [sb, domainAgeDays, redirects, brandImpersonation, geographicRisk, certificate, reputation] = await Promise.all([
+      checkSafeBrowsing(normalizedUrl),
+      getDomainAgeDays(normalizedUrl),
+      checkRedirects(normalizedUrl),
+      detectBrandImpersonation(syntax.hostname),
+      getGeographicRisk(syntax.hostname),
+      analyzeCertificate(syntax.hostname),
+      getReputationScore(syntax.domain)
+    ]);
+
+    // Complete basic factors
+    basicFactors.youngDomain = (domainAgeDays !== null) ? domainAgeDays < 180 : false;
+    basicFactors.listedInFeeds = !!sb.listed;
+    basicFactors.excessiveRedirects = redirects.excessive;
+
+    // Advanced factors
+    const advancedFactors = {
+      brandImpersonation,
+      geographicRisk,
+      certificate,
+      reputation,
+      urlStructure: analyzeURLStructure(syntax.hostname),
+      suspiciousTLD: hasSuspiciousTLD(syntax.hostname)
+    };
+
+    const result = responseFromFactors(normalizedUrl, basicFactors, advancedFactors, {
       domainAgeDays,
       safeBrowsing: sb,
-      redirects: redirects.count
+      redirects: redirects.count,
+      redirectChain: redirects.chain || []
     });
 
     cache.set(cacheKey, result);
@@ -172,35 +293,47 @@ app.post('/api/risk-details', async (req, res) => {
       return res.json(cached);
     }
     
-    // Fallback: compute on-demand identical to /check-url
+    // Fallback: compute on-demand identical to /check-url with advanced features
     const syntax = analyzeUrlSyntax(normalizedUrl);
-    const noHttps = syntax.protocol !== 'https';
-    const suspicious = hasSuspiciousKeywords(normalizedUrl);
-    const ipObfuscation = isIpObfuscation(syntax.hostname);
-    const temporaryService = isTemporaryService(syntax.hostname);
-    const suspiciousSubdomain = hasSuspiciousSubdomain(syntax.hostname);
-
-    const [sb, domainAgeDays, redirects] = await Promise.all([
-      checkSafeBrowsing(normalizedUrl),
-      getDomainAgeDays(normalizedUrl),
-      checkRedirects(normalizedUrl)
-    ]);
-
-    const factors = {
-      noHttps,
-      youngDomain: (domainAgeDays !== null) ? domainAgeDays < 180 : false,
-      ipObfuscation,
-      listedInFeeds: !!sb.listed,
-      suspiciousKeywords: suspicious,
-      excessiveRedirects: redirects.excessive,
-      temporaryService,
-      suspiciousSubdomain
+    const basicFactors = {
+      noHttps: syntax.protocol !== 'https',
+      suspiciousKeywords: hasSuspiciousKeywords(normalizedUrl),
+      ipObfuscation: isIpObfuscation(syntax.hostname),
+      temporaryService: isTemporaryService(syntax.hostname),
+      suspiciousSubdomain: hasSuspiciousSubdomain(syntax.hostname)
     };
 
-    const result = responseFromFactors(normalizedUrl, factors, {
+    // Advanced analysis (parallel execution)
+    const [sb, domainAgeDays, redirects, brandImpersonation, geographicRisk, certificate, reputation] = await Promise.all([
+      checkSafeBrowsing(normalizedUrl),
+      getDomainAgeDays(normalizedUrl),
+      checkRedirects(normalizedUrl),
+      detectBrandImpersonation(syntax.hostname),
+      getGeographicRisk(syntax.hostname),
+      analyzeCertificate(syntax.hostname),
+      getReputationScore(syntax.domain)
+    ]);
+
+    // Complete basic factors
+    basicFactors.youngDomain = (domainAgeDays !== null) ? domainAgeDays < 180 : false;
+    basicFactors.listedInFeeds = !!sb.listed;
+    basicFactors.excessiveRedirects = redirects.excessive;
+
+    // Advanced factors
+    const advancedFactors = {
+      brandImpersonation,
+      geographicRisk,
+      certificate,
+      reputation,
+      urlStructure: analyzeURLStructure(syntax.hostname),
+      suspiciousTLD: hasSuspiciousTLD(syntax.hostname)
+    };
+
+    const result = responseFromFactors(normalizedUrl, basicFactors, advancedFactors, {
       domainAgeDays,
       safeBrowsing: sb,
-      redirects: redirects.count
+      redirects: redirects.count,
+      redirectChain: redirects.chain || []
     });
 
     cache.set(cacheKey, result);
@@ -210,6 +343,117 @@ app.post('/api/risk-details', async (req, res) => {
     return res.status(500).json({ 
       error: 'internal_error',
       message: 'An error occurred while analyzing the URL'
+    });
+  }
+});
+
+// Feedback submission endpoint
+app.post('/api/feedback', async (req, res) => {
+  try {
+    const { url, type, userId, comment } = req.body || {};
+    
+    if (!url || !type || !userId) {
+      return res.status(400).json({
+        error: 'missing_fields',
+        message: 'URL, type, and userId are required'
+      });
+    }
+    
+    if (!['false_positive', 'confirmed_threat', 'user_blocked', 'user_allowed'].includes(type)) {
+      return res.status(400).json({
+        error: 'invalid_type',
+        message: 'Invalid feedback type'
+      });
+    }
+    
+    // Simple feedback storage (in production, use database)
+    const feedback = {
+      url: url.toLowerCase(),
+      type,
+      userId,
+      comment: comment || '',
+      timestamp: new Date().toISOString()
+    };
+    
+    logger.info({ url, type, userId }, 'Feedback submitted');
+    
+    return res.json({
+      success: true,
+      message: 'Feedback recorded successfully',
+      feedback
+    });
+    
+  } catch (err) {
+    logger.error({ err: String(err) }, 'Feedback submission failed');
+    return res.status(500).json({
+      error: 'internal_error',
+      message: 'Failed to submit feedback'
+    });
+  }
+});
+
+// Community feedback endpoint
+app.get('/api/feedback/:url', async (req, res) => {
+  try {
+    const { url } = req.params;
+    
+    if (!url) {
+      return res.status(400).json({
+        error: 'url_required',
+        message: 'URL parameter is required'
+      });
+    }
+    
+    // Simplified community score (in production, use actual database)
+    const communityScore = {
+      score: 75, // Mock score
+      confidence: 85,
+      totalReports: 12,
+      breakdown: {
+        threats: 3,
+        falsePositives: 2,
+        userBlocks: 5,
+        userAllows: 2
+      }
+    };
+    
+    return res.json({
+      url,
+      communityScore,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (err) {
+    logger.error({ err: String(err) }, 'Feedback retrieval failed');
+    return res.status(500).json({
+      error: 'internal_error',
+      message: 'Failed to retrieve feedback'
+    });
+  }
+});
+
+// Statistics endpoint
+app.get('/api/stats', async (req, res) => {
+  try {
+    const stats = {
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+      cache: {
+        size: cache.size || 0,
+        hits: cache.hits || 0,
+        misses: cache.misses || 0
+      },
+      version: 'advanced',
+      timestamp: new Date().toISOString()
+    };
+    
+    return res.json(stats);
+    
+  } catch (err) {
+    logger.error({ err: String(err) }, 'Stats retrieval failed');
+    return res.status(500).json({
+      error: 'internal_error',
+      message: 'Failed to retrieve statistics'
     });
   }
 });

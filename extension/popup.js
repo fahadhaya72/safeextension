@@ -1,4 +1,12 @@
-const API_BASE_URL = 'https://safeextension-backend.onrender.com/api';
+// 🔐 CONFIGURATION - Replace with your actual values
+const CONFIG = {
+  // IMPORTANT: Replace with your actual backend URL and API key
+  API_BASE_URL: 'https://your-backend-url.onrender.com/api', // Replace with your backend URL
+  API_KEY: 'your_secure_api_key_here', // Replace with your actual API key
+  EXTENSION_ID: 'your_extension_id_here' // Replace with your actual extension ID
+};
+
+const API_BASE_URL = 'https://safeextension-backend.onrender.com/api'; // This will be replaced by CONFIG.API_BASE_URL
 const CACHE_TIME = 5 * 60 * 1000; // 5 minutes
 
 class URLChecker {
@@ -64,18 +72,29 @@ class URLChecker {
     this.showLoader();
 
     try {
-      const response = await fetch(`${API_BASE_URL}/check-url`, {
+      const response = await fetch(`${CONFIG.API_BASE_URL}/check-url`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': CONFIG.API_KEY,
+          'x-extension-id': CONFIG.EXTENSION_ID
+        },
         body: JSON.stringify({ url: normalizedUrl })
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        if (response.status === 401) {
+          throw new Error('Invalid API key - please check configuration');
+        } else if (response.status === 403) {
+          throw new Error('Invalid extension ID - please check configuration');
+        } else if (response.status === 429) {
+          throw new Error('Rate limit exceeded - please try again later');
+        }
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
-      
+
       // Cache the result
       this.lastResults.set(normalizedUrl, {
         data,

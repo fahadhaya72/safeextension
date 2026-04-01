@@ -1,11 +1,56 @@
+# 🚨 CRITICAL SECURITY WARNING - READ FIRST
+
+## ⚠️ NOT FOR PRODUCTION USE
+
+This is a **development/educational project** with serious security vulnerabilities:
+
+### 🚫 **DO NOT USE IN PRODUCTION**
+- ❌ **Hardcoded Backend URL** - Exposed to attacks
+- ❌ **No API Authentication** - Anyone can abuse your backend
+- ❌ **Missing Security Hardening** - Vulnerable to exploitation
+- ❌ **URL Logging** - May log sensitive URLs for debugging
+- ❌ **No Rate Limiting per User** - Easy to DDoS
+
+### ✅ **WHAT THIS IS**
+- 📚 **Educational Project** - Learn browser extension development
+- 🔬 **Testing Platform** - Experiment with security algorithms
+- 🛠️ **Development Tool** - Build and test security features
+
+---
+
+## 🔐 PRIVACY & DATA HANDLING
+
+### **What We Collect**
+- ✅ **URLs Only** - Only the URLs being analyzed
+- ✅ **Risk Factors** - Technical analysis results
+- ✅ **Timestamps** - When analysis occurred
+
+### **What We DON'T Collect**
+- ❌ **Personal Information** - No names, emails, credentials
+- ❌ **Website Content** - No page content, cookies, or form data
+- ❌ **Browsing History** - No complete history tracking
+
+### **📄 Full Privacy Policy**
+See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for complete details.
+
+---
+
+## 🎯 FALSE POSITIVE NOTICE
+
+**⚠️ This system is NOT perfect and will make mistakes:**
+
+- **False Positives:** Safe sites may be flagged as dangerous
+- **False Negatives:** Dangerous sites may not be detected
+- **User Discretion Required:** Always verify warnings yourself
+- **Not a Substitute:** Use alongside other security tools
+
+---
+
 # SafeExtension - Browser Extension for URL Safety Analysis
 
 A comprehensive browser extension that analyzes URLs for phishing, malware, and other security risks in real-time.
 
-Live Demo :
-```
-https://safeextension.vercel.app/
-```
+**⚠️ Development/Educational Use Only - NOT Production Ready**
 ## 📋 Table of Contents
 
 - [Features](#features)
@@ -44,7 +89,47 @@ https://safeextension.vercel.app/
 
 ---
 
-## 📁 Project Structure
+## � LIMITATIONS & WHAT IT CAN'T DO
+
+**⚠️ Important: This system has significant limitations:**
+
+### **Detection Limitations**
+- ❌ **Not 100% Accurate** - Will miss some threats and flag safe sites
+- ❌ **No Content Analysis** - Cannot analyze webpage content or behavior
+- ❌ **No Behavioral Detection** - Cannot detect malicious JavaScript
+- ❌ **No Zero-Day Protection** - Only detects known threat patterns
+- ❌ **Language Dependent** - Primarily designed for English-language threats
+
+### **Technical Limitations**
+- ❌ **No Real-time Updates** - Threat feeds may have delays
+- ❌ **API Dependencies** - Relies on external services (Google, WHOIS)
+- ❌ **Rate Limiting** - External APIs have usage limits
+- ❌ **Network Required** - Cannot work offline
+- ❌ **Browser Compatibility** - May not work on all browsers/versions
+
+### **Security Limitations**
+- ❌ **No ML/AI** - Rule-based system only
+- ❌ **Static Rules** - Cannot adapt to new attack patterns
+- ❌ **No Sandbox** - Runs in browser environment
+- ❌ **No Encryption** - URLs sent in plain text to backend
+
+### **Privacy Limitations**
+- ❌ **URL Logging** - URLs may be logged for debugging
+- ❌ **Third-party APIs** - Uses external services with their own policies
+- ❌ **No Anonymization** - URLs sent as-is to analysis services
+
+### **What This IS NOT**
+- 🚫 **Antivirus Replacement** - Not a substitute for proper antivirus software
+- 🚫 **Complete Protection** - Does not protect against all threats
+- 🚫 **Enterprise Solution** - Not designed for corporate environments
+- 🚫 **Legal Compliance Tool** - Not for regulatory compliance
+- 🚫 **Guaranteed Safety** - Cannot guarantee 100% protection
+
+**⚠️ Always use multiple security layers and exercise caution when browsing.**
+
+---
+
+## � Project Structure
 
 ```
 safeextension/
@@ -139,6 +224,116 @@ safeextension/
    - Click "Load unpacked"
    - Navigate to `safeextension/extension/` folder
    - Select and confirm
+
+---
+
+## 🔐 API AUTHENTICATION REQUIREMENTS
+
+### ⚠️ **CRITICAL: Current Version Has NO Authentication**
+
+**Current Status:**
+- ❌ **No API Keys Required** - Anyone can call your backend
+- ❌ **No Rate Limiting per User** - Easy to abuse/DoS
+- ❌ **No Extension Validation** - Any client can make requests
+- ❌ **CORS Set to \*** - Allows any origin
+
+### **🚨 BEFORE PRODUCTION - Must Implement:**
+
+#### 1. **API Key Authentication**
+```javascript
+// Required in production
+const API_KEY = process.env.SAFEEXTENSION_API_KEY;
+app.use('/api/', (req, res, next) => {
+  const key = req.headers['x-api-key'];
+  if (key !== API_KEY) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
+});
+```
+
+#### 2. **Extension ID Validation**
+```javascript
+// Verify requests come from your extension
+const EXTENSION_ID = process.env.CHROME_EXTENSION_ID;
+app.use('/api/', (req, res, next) => {
+  const extensionId = req.headers['x-extension-id'];
+  if (extensionId !== EXTENSION_ID) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  next();
+});
+```
+
+#### 3. **JWT Token System**
+```javascript
+// More secure option
+const jwt = require('jsonwebtoken');
+const token = jwt.sign({ extensionId: EXTENSION_ID }, JWT_SECRET);
+```
+
+#### 4. **Environment Variables for Production**
+```env
+# Add to .env for production
+SAFEEXTENSION_API_KEY=your_secure_api_key_here
+CHROME_EXTENSION_ID=your_extension_id_here
+JWT_SECRET=your_jwt_secret_here
+ALLOWED_ORIGIN=chrome-extension://your_extension_id
+```
+
+### **Security Headers Required:**
+```javascript
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+}));
+```
+
+---
+
+## 🔍 PERMISSION JUSTIFICATION
+
+### **Browser Extension Permissions & Why We Need Them**
+
+| Permission | Required For | Risk Level | Justification |
+|------------|---------------|------------|----------------|
+| `activeTab` | Get current tab URL | **Low** | Needed to analyze the page you're on |
+| `scripting` | Inject content scripts | **Medium** | Required for page interaction and warnings |
+| `tabs` | Access tab information | **Medium** | Needed for navigation and blocking |
+| `webRequest` | Monitor redirects | **Medium** | Detect suspicious redirect chains |
+| `storage` | Save blocked sites | **Low** | Store user preferences and blocklist |
+| `<all_urls>` | Monitor all websites | **HIGH** | ⚠️ **Most Critical** - Required for universal protection |
+
+### **🚨 High-Risk Permission: `<all_urls>`**
+
+**Why We Need It:**
+- Phishing can occur on ANY website
+- Malicious links exist everywhere
+- Universal protection requires universal access
+
+**What We DON'T Do With It:**
+- ❌ Read page content
+- ❌ Steal cookies or passwords
+- ❌ Track complete browsing history
+- ❌ Inject ads or modify content
+
+**User Trust Required:**
+- ✅ Source code is publicly available
+- ✅ No obfuscated code
+- ✅ Clear privacy policy
+- ✅ Open to security audits
+
+### **Permission Minimization Efforts:**
+- ✅ Only request permissions absolutely necessary
+- ✅ Use minimum required scope
+- ✅ No unnecessary background processing
+- ✅ Clear user interface for all functionality
 
 ---
 
@@ -373,6 +568,88 @@ The system detects various suspicious patterns including:
 
 ---
 
+## 🚨 SECURITY WARNING - Not for Production
+
+### ⚠️ Exposed Backend Endpoint
+The current extension contains a hardcoded production backend URL. This should NEVER be used in production because:
+- ✗ Backend is exposed to direct attacks
+- ✗ No API key authentication
+- ✗ Vulnerable to DDoS attacks
+- ✗ Rate limiting (60 req/min) can be easily exhausted
+
+### What You MUST Do Before Production Release:
+1. **Add API Authentication**
+   - Implement OAuth/API keys for extension
+   - Sign extension requests with tokens
+   
+2. **Use a Custom Domain (Not Public)**
+   - Don't use Render.com public URLs
+   - Use your own domain with authentication
+   
+3. **Implement Extension-Specific Auth**
+   - Chrome Extension ID validation
+   - JWT tokens for requests
+   
+4. **Backend Security Hardening**
+   - IP whitelisting (if possible)
+   - Require valid extension signatures
+   - Strict CORS headers (not *)
+
+---
+
+## 🔐 Extension Permissions & Privacy
+
+### Permission Rationale
+
+| Permission | Purpose | Risk Level |
+|-----------|---------|-----------|
+| `activeTab` | Access current tab URL | Low |
+| `scripting` | Inject content scripts | Medium |
+| `tabs` | Access tab information | Medium |
+| `webRequest` | Monitor redirects | Medium |
+| `storage` | Store blocked domains | Low |
+| `<all_urls>` | Monitor all websites | **HIGH** |
+
+### Important Privacy Note:
+⚠️ This extension monitors ALL websites you visit. It only sends URLs to the backend for analysis—NO cookies, passwords, or personal data are captured. However, you should only trust this extension if:
+- You understand it runs on all websites
+- You trust the developer (Fahad)
+- You have reviewed the source code
+
+---
+
+## 🚫 Automatic Blocking Behavior
+
+### When Your Extension Blocks Sites:
+
+1. **Score < 10 (Critical Risk)**
+   - Automatically redirects to blocking page
+   - User can click "Unblock for this session" or permanently unblock
+   - Domain added to blocklist (stored locally)
+
+2. **Score 10-40 (High Risk)**
+   - Shows warning overlay on page
+   - User can proceed anyway or go back
+
+3. **Score 40-90 (Medium Risk)**
+   - Shows alert in extension popup
+   - No automatic action
+
+4. **Score 90+ (Safe)**
+   - No warning or blocking
+
+### To Unblock a Site:
+- Open extension popup
+- Go to "Blocked Sites" tab
+- Click "Unblock" next to the domain
+
+### Important:
+- Blocked domains are stored **locally in your browser**
+- Blocking decisions are made by SafeExtension's algorithm
+- False positives are possible—always review before trusting
+
+---
+
 ## 🧪 Testing
 
 ### Manual Testing
@@ -449,16 +726,258 @@ netstat -ano | findstr :4000  # Windows
 
 ## 🔐 Security Considerations
 
-1. **API Keys**: Never commit `.env` file with real keys
-2. **CORS**: Restrict `ALLOWED_ORIGIN` in production
-3. **HTTPS**: Always use HTTPS in production
-4. **Rate Limiting**: Default 60 requests/minute per IP
-5. **Input Validation**: All inputs sanitized and validated
-6. **Error Handling**: No sensitive info in error messages
+### ✅ Current Implementation
+- **API Keys**: Never commit `.env` file with real keys
+- **CORS**: Restrict `ALLOWED_ORIGIN` in production
+- **HTTPS**: Always use HTTPS in production
+- **Rate Limiting**: Default 60 requests/minute per IP
+- **Input Validation**: All inputs sanitized and validated
+- **Error Handling**: No sensitive info in error messages
+
+### ❌ CRITICAL - Before Production Release:
+
+1. **Never Expose Backend URL**
+   - Remove hardcoded 'safeextension-backend.onrender.com'
+   - Use a custom domain
+   - Implement API key authentication
+
+2. **Extension Permissions Audit**
+   - Justify `<all_urls>` permission
+   - Consider restricting to http(s) only
+   - Add privacy policy for monitoring all sites
+
+3. **Automatic Blocking Disclosure**
+   - Clearly warn users that extension auto-blocks dangerous sites
+   - Provide easy unblock mechanism (✓ already done)
+   - Log blocking decisions
+
+4. **Data Logging & Privacy**
+   - Do you log URLs being checked?
+   - Do you store user data on backend?
+   - Add privacy policy mentioning URL checking
+
+5. **Extension Store Submission**
+   - Add privacy policy.html
+   - Disclose all permissions in store listing
+   - Get code review before publishing to Chrome Web Store
+
+### 🚨 Production Security Requirements
+
+| Requirement | Status | Priority |
+|-------------|--------|----------|
+| API Authentication | ❌ Missing | **Critical** |
+| Custom Domain | ❌ Missing | **Critical** |
+| CORS Restriction | ❌ Missing | **Critical** |
+| Per-Extension Rate Limiting | ❌ Missing | **High** |
+| Privacy Policy | ❌ Missing | **High** |
+| Extension Store Review | ❌ Missing | **Medium** |
 
 ---
 
-## 📦 Building for Production
+## 🏪 CHROME WEB STORE REQUIREMENTS
+
+### **📋 Store Submission Checklist**
+
+#### **🚫 BLOCKERS - Must Fix Before Submission**
+- ❌ **Privacy Policy** - Add `privacy_policy.html` file
+- ❌ **API Authentication** - Implement secure backend authentication
+- ❌ **Hardcoded URLs** - Remove all hardcoded backend URLs
+- ❌ **Security Audit** - Professional security review required
+- ❌ **Permission Justification** - Document why each permission is needed
+
+#### **⚠️ HIGH PRIORITY - Should Fix**
+- ⚠️ **Error Handling** - Better error messages and fallbacks
+- ⚠️ **Performance Optimization** - Reduce memory usage and startup time
+- ⚠️ **User Interface** - Improve accessibility and responsive design
+- ⚠️ **Testing Coverage** - Add comprehensive test suite
+- ⚠️ **Documentation** - Complete user documentation
+
+#### **✅ STORE REQUIREMENTS - Must Have**
+
+**Privacy Policy Requirements:**
+- ✅ Privacy policy file (`privacy_policy.html`)
+- ✅ Link to privacy policy in extension description
+- ✅ Clear data collection disclosure
+- ✅ Data retention policies
+- ✅ User rights information
+
+**Permission Disclosure:**
+- ✅ Each permission explained in store listing
+- ✅ Justification for `<all_urls>` permission
+- ✅ Clear explanation of data handling
+- ✅ User benefit statements
+
+**Security Requirements:**
+- ✅ No hardcoded secrets or API keys
+- ✅ Proper input validation and sanitization
+- ✅ Secure communication (HTTPS only)
+- ✅ No eval() or dangerous JavaScript functions
+
+**Content Policy Compliance:**
+- ✅ No deceptive functionality
+- ✅ Accurate description and screenshots
+- ✅ No claims of 100% protection
+- ✅ Clear limitations and disclaimers
+
+#### **📝 Store Listing Requirements**
+
+**Required Information:**
+```
+Name: SafeExtension - URL Security Analysis
+Description: Advanced URL security analysis with real-time threat detection
+Category: Security
+Privacy Policy: [Link to PRIVACY_POLICY.md]
+Permissions: activeTab, scripting, tabs, webRequest, storage, <all_urls>
+```
+
+**Screenshots Needed:**
+- Main popup interface
+- Warning/blocking pages
+- Settings/configuration pages
+- Risk analysis results
+
+**Store Description Template:**
+```
+SafeExtension provides advanced URL security analysis to protect against phishing, malware, and other online threats.
+
+⚠️ EDUCATIONAL/DEVELOPMENT USE ONLY
+This is a learning project with known limitations. Not for production use.
+
+Features:
+• Real-time URL analysis
+• Multi-factor risk assessment
+• Geographic threat detection
+• Brand impersonation protection
+• Community-driven feedback
+
+Privacy: Only analyzes URLs, no personal data collected.
+Limitations: Not 100% accurate, may have false positives/negatives.
+
+For educational and development purposes only.
+```
+
+#### **🔒 Technical Requirements**
+
+**Manifest V3 Compliance:**
+- ✅ Use service workers instead of background pages
+- ✅ Proper action handlers
+- ✅ Declarative content scripts
+- ✅ Host permissions properly declared
+
+**Performance Requirements:**
+- ✅ Startup time < 500ms
+- ✅ Memory usage < 50MB
+- ✅ CPU usage < 10% during analysis
+- ✅ Network requests properly throttled
+
+**Security Requirements:**
+- ✅ Content Security Policy (CSP)
+- ✅ No inline JavaScript
+- ✅ Proper error handling
+- ✅ Secure API communication
+
+#### **📊 Store Review Process**
+
+**Submission Steps:**
+1. **Developer Account** - Register for Chrome Web Store developer account ($5 fee)
+2. **Extension Package** - Create ZIP file with extension files
+3. **Store Listing** - Complete all required fields
+4. **Screenshots** - Upload required screenshots
+5. **Privacy Policy** - Upload privacy policy file
+6. **Submit for Review** - Wait for Google review (1-7 days)
+
+**Common Rejection Reasons:**
+- ❌ Missing privacy policy
+- ❌ Insufficient permission justification
+- ❌ Security vulnerabilities
+- ❌ Deceptive functionality
+- ❌ Poor user experience
+- ❌ Policy violations
+
+**Appeal Process:**
+- Review rejection reasons carefully
+- Fix all identified issues
+- Resubmit with explanation of changes
+- May require multiple review cycles
+
+---
+
+## � Production Deployment Security Checklist
+
+### ❌ DO NOT Ship With Current Setup
+
+Before releasing to Chrome Web Store or users:
+
+- [ ] Remove hardcoded backend URL (safeextension-backend.onrender.com)
+- [ ] Implement API key/JWT authentication
+- [ ] Set CORS to specific domain only (not *)
+- [ ] Implement per-extension-instance rate limiting
+- [ ] Add privacy policy (explain URL monitoring)
+- [ ] Document automatic blocking behavior clearly
+- [ ] Add "Report False Positive" feature
+- [ ] Implement request signing/validation
+- [ ] Set up logging for security events
+- [ ] Security audit of manifest permissions
+
+### Current Limitations
+
+This project is **suitable for personal/development use only**. For production:
+
+| Issue | Impact | Solution |
+|-------|--------|----------|
+| Hardcoded backend URL | High | Use authenticated API with custom domain |
+| No request authentication | High | Implement JWT or API key system |
+| CORS=* | High | Restrict to extension domain |
+| Global rate limit | Medium | Per-extension rate limiting |
+| `<all_urls>` permission | Medium | Add privacy policy & user consent |
+
+### Post-Launch Monitoring
+
+After release:
+- Monitor false positive reports
+- Track scoring accuracy
+- Watch for backend attacks
+- Collect user feedback on blocking accuracy
+
+---
+
+## 🔐 Backend Security Implementation
+
+### Current Status: ⚠️ Development Only
+
+The current backend is configured for **development use only**. Before production:
+
+#### 1. API Authentication (REQUIRED)
+```javascript
+// Add JWT token validation in backend/src/index.js
+app.use('/api/', (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token || !verifyToken(token)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
+});
+```
+
+#### 2. CORS Hardening (REQUIRED)
+```env
+# Current (UNSAFE)
+ALLOWED_ORIGIN=*
+
+# Production (SAFE)
+ALLOWED_ORIGIN=https://yourdomain.com
+```
+
+#### 3. Rate Limiting by User (REQUIRED)
+- Current: 60 req/min global
+- Should be: 10-20 req/min per extension ID
+
+#### 4. Extension Signature Validation (RECOMMENDED)
+Verify that requests come from your official extension, not a cloned version.
+
+---
+
+## �� Building for Production
 
 ### Backend Deployment
 
@@ -538,6 +1057,6 @@ For issues, questions, or suggestions:
 
 ---
 
-**Last Updated**: January 2026  
+**Last Updated**: April 2026  
 **Version**: 1.1.3  
-**Status**: Production Ready ✅
+**Status**: Development/Educational Use Only ⚠️

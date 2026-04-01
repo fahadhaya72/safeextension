@@ -56,7 +56,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ===== URL CHECK FORM =====
-  const API_BASE = 'https://safeextension-backend.onrender.com/api';
+  const CONFIG = {
+    API_BASE: 'https://your-app-name.onrender.com/api', // Replace with your Render URL
+    API_KEY: '20d429b06738d8a1d48ac296048b747259bf0993d9d9f3e951901dac69a21625' // Your API key
+  };
+  
   const form = document.getElementById('landing-check-form');
   const urlInput = document.getElementById('landing-url');
   const loader = document.getElementById('landing-loader');
@@ -185,11 +189,14 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
         console.log('[SafeExtension] Normalized URL:', normalized);
-        console.log('[SafeExtension] Calling API at:', `${API_BASE}/check-url`);
+        console.log('[SafeExtension] Calling API at:', `${CONFIG.API_BASE}/check-url`);
 
-        const response = await fetch(`${API_BASE}/check-url`, {
+        const response = await fetch(`${CONFIG.API_BASE}/check-url`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-api-key': CONFIG.API_KEY
+          },
           body: JSON.stringify({ url: normalized })
         });
 
