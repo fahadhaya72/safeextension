@@ -6,7 +6,7 @@ const CONFIG = {
   EXTENSION_ID: 'your_extension_id_here' // Replace with your actual extension ID
 };
 
-const API_BASE_URL = 'https://safeextension-backend.onrender.com/api'; // This will be replaced by CONFIG.API_BASE_URL
+const API_BASE_URL = CONFIG.API_BASE_URL; // Use CONFIG.API_BASE_URL
 const CACHE_TIME = 5 * 60 * 1000; // 5 minutes
 
 class URLChecker {

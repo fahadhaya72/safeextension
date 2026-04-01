@@ -1,7 +1,14 @@
 // Content Script for SafeExtension
 // Runs on web pages to detect and highlight suspicious links
 
-const API_BASE_URL = 'https://safeextension-backend.onrender.com/api';
+// 🔐 CONFIGURATION - Same as popup.js and background.js
+const CONFIG = {
+  API_BASE_URL: 'https://safeextension-backend.onrender.com/api', // Production backend URL
+  API_KEY: '20d429b06738d8a1d48ac296048b747259bf0993d9d9f3e951901dac69a21625', // Production API key
+  EXTENSION_ID: 'your_extension_id_here' // Replace with your actual extension ID
+};
+
+const API_BASE_URL = CONFIG.API_BASE_URL;
 const CACHE_TIME = 10 * 60 * 1000; // 10 minutes
 
 class ContentScriptChecker {
@@ -77,7 +84,11 @@ class ContentScriptChecker {
     try {
       const response = await fetch(`${API_BASE_URL}/check-url`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-api-key': CONFIG.API_KEY,
+          'x-extension-id': CONFIG.EXTENSION_ID
+        },
         body: JSON.stringify({ url: href })
       });
 
