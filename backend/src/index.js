@@ -52,10 +52,44 @@ app.use(helmet({
 }));
 
 app.use(express.json({ limit: '10mb' }));
-app.use(cors({ 
-  origin: ALLOWED_ORIGIN === '*' ? true : ALLOWED_ORIGIN,
-  credentials: true
-}));
+// CORS configuration to support multiple origins
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // List of allowed origins
+    const allowedOrigins = [
+      'https://safeextension.vercel.app',
+      'chrome-extension://your_extension_id',
+      'http://localhost:3000',
+      'http://localhost:3001'
+    ];
+    
+    // If ALLOWED_ORIGIN is set to '*', allow all origins (development only)
+    if (ALLOWED_ORIGIN === '*') {
+      return callback(null, true);
+    }
+    
+    // Check if the origin is in the allowed list
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // Check if the origin matches the ALLOWED_ORIGIN env var
+    if (ALLOWED_ORIGIN && ALLOWED_ORIGIN !== '*' && origin === ALLOWED_ORIGIN) {
+      return callback(null, true);
+    }
+    
+    // Block all other origins
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Extension-ID']
+};
+
+app.use(cors(corsOptions));
 app.use(morgan('combined'));
 
 // API Authentication Middleware
