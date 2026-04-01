@@ -328,36 +328,48 @@ Content-Type: application/json
 SafeExtension uses a **risk-based scoring system** (0-100 scale):
 
 1. **Base Score**: 100 (Safe)
-2. **Deductions**:
-   - No HTTPS: -20 points
-   - Young Domain (<180 days): -25 points
-   - Listed in threat feeds: -50 points
-   - Suspicious keywords: -15 points
-   - Excessive redirects (>3): -10 points
+2. **Multiple Risk Factors Analyzed**:
+   - HTTPS encryption verification
+   - Domain registration age analysis
+   - Threat intelligence database checks
+   - Suspicious pattern detection
+   - Redirect chain analysis
+   - IP obfuscation detection
+   - Temporary service identification
+   - Subdomain pattern analysis
 
 3. **Final Score**: 100 - total deductions (clamped to 0-100)
 
 ### Risk Classification
 
-- **High Risk** (Score: 0-49): 🚫 Block - High confidence malicious
-- **Medium Risk** (Score: 50-89): ⚠️ Warn - Suspicious, proceed carefully
-- **Loq Risk** (Score: 90-100): ✅ Allow - Safe, no major threats
+- **Allow** (Score: 90-100): ✅ Safe - No major threats
+- **Alert** (Score: 50-89): ⚠️ Warn - Suspicious, proceed carefully
+- **High Alert** (Score: 40-49): 🚨 High Risk - Very suspicious
+- **Block** (Score: 0-39): 🚫 Block - High confidence malicious
 
 ### Risk Factors
 
-| Factor | Detection | Deduction |
-|--------|-----------|-----------|
-| **HTTPS** | Checks for HTTPS protocol | 20 pts |
-| **Domain Age** | WHOIS lookup, must be >180 days | 25 pts |
-| **Threat Feed** | Google Safe Browsing API | 50 pts |
-| **Keywords** | Scans URL for phishing keywords | 15 pts |
-| **Redirects** | Follows redirects, max 10 hops | 10 pts |
+| Factor | Detection Method | Impact Level |
+|--------|------------------|--------------|
+| **HTTPS** | Protocol verification | High |
+| **Domain Age** | WHOIS registration analysis | High |
+| **Threat Feed** | Global threat databases | Critical |
+| **Keywords** | Pattern matching | Medium |
+| **Redirects** | Chain analysis | Medium |
+| **IP Obfuscation** | Pattern detection | High |
+| **Temporary Services** | Service identification | High |
+| **Suspicious Subdomains** | Pattern analysis | Medium |
 
-### Suspicious Keywords Detected
+### Suspicious Pattern Detection
 
-- login, verify, update, secure
-- bank, account, paypal
-- free, bonus, win, prize
+The system detects various suspicious patterns including:
+- Authentication-related terms
+- Financial/banking terminology
+- Urgency/offer language
+- Technical manipulation attempts
+- Service abuse patterns
+
+*Note: Specific keywords and thresholds are not disclosed to prevent detection bypass attempts.*
 
 ---
 
@@ -481,7 +493,31 @@ NODE_ENV=production npm start
 
 ## 📄 License
 
-This project is licensed under the MIT License - see LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+**MIT License Summary:**
+
+```
+Copyright (c) 2026 Fahad
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
 
 ---
 
