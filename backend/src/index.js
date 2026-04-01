@@ -109,8 +109,8 @@ app.use('/api/', (req, res, next) => {
     });
   }
   
-  // Check extension ID (if configured)
-  if (EXTENSION_ID && providedExtensionId !== EXTENSION_ID) {
+  // Check extension ID (if configured) - but allow web frontend
+  if (EXTENSION_ID && providedExtensionId !== EXTENSION_ID && providedExtensionId !== 'web') {
     logger.warn({ ip: req.ip, extensionId: providedExtensionId }, 'Invalid extension ID');
     return res.status(403).json({ 
       error: 'forbidden',
