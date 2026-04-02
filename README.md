@@ -58,6 +58,7 @@ A comprehensive browser extension that analyzes URLs for phishing, malware, and 
 - [Installation](#installation)
   - [Backend Setup](#backend-setup)
   - [Extension Setup](#extension-setup)
+  - [Landing Page Setup](#landing-page-setup)
 - [Configuration](#configuration)
 - [Running the Project](#running-the-project)
   - [Development Mode](#development-mode)
@@ -76,15 +77,17 @@ A comprehensive browser extension that analyzes URLs for phishing, malware, and 
 ## ✨ Features
 
 - 🔍 **Real-time URL Analysis** - Instantly check URLs for security risks
-- 🛡️ **Multi-factor Risk Assessment** - Analyzes 5 different risk factors
-- 🌐 **Google Safe Browsing Integration** - Real-time threat database lookups
+- 🛡️ **Multi-factor Risk Assessment** - Analyzes multiple risk factors including brand spoofing, domain analysis, and threat intelligence
+- 🌐 **Multiple Threat Intelligence Feeds** - Integrates with Google Safe Browsing, OpenPhish, PhishTank, URLhaus, and VirusTotal
+- 🏢 **Brand Spoofing Detection** - Identifies attempts to impersonate legitimate brands and companies
 - 📅 **Domain Age Analysis** - Detects recently registered suspicious domains
-- 🔗 **Redirect Detection** - Identifies excessive or suspicious redirects
+- 🔗 **Redirect Detection** - Identifies excessive or suspicious redirect chains
 - 🔐 **HTTPS Verification** - Warns about unencrypted connections
 - 💾 **Smart Caching** - Reduces API calls with intelligent result caching
 - 📊 **Detailed Risk Reporting** - Clear, actionable safety recommendations
-- 🎨 **Beautiful UI** - Modern, intuitive popup interface
+- 🎨 **Beautiful UI** - Modern, intuitive popup interface with blocked page warnings
 - ⚡ **Performance Optimized** - Fast, responsive experience
+- 🌍 **Landing Page** - Professional website for project presentation and user information
 
 ---
 
@@ -128,23 +131,34 @@ A comprehensive browser extension that analyzes URLs for phishing, malware, and 
 
 ---
 
-## � Project Structure
+## 🏗️ Project Structure
 
 ```
 safeextension/
 ├── backend/                          # Node.js/Express API server
 │   ├── src/
 │   │   ├── index.js                 # Main Express app & API endpoints
+│   │   ├── index-advanced.js        # Advanced API endpoints
+│   │   ├── advanced-scoring.js      # Advanced risk scoring algorithms
+│   │   ├── brand-detector.js        # Brand spoofing detection
 │   │   ├── cache.js                 # LRU cache implementation
+│   │   ├── domain-parser.js         # Domain parsing utilities
+│   │   ├── feedback.js              # User feedback handling
 │   │   ├── logger.js                # Pino logging setup
+│   │   ├── rule-engine.js           # Rule-based analysis engine
 │   │   ├── scoring.js               # Risk scoring algorithm
+│   │   ├── scoring-refactored.js    # Refactored scoring system
 │   │   └── services/
-│   │       ├── safebrowsing.js     # Google Safe Browsing API
+│   │       ├── openphish.js         # OpenPhish threat feed
+│   │       ├── phishtank.js         # PhishTank database
+│   │       ├── safebrowsing.js      # Google Safe Browsing API
+│   │       ├── urlhaus.js           # URLhaus malware URLs
+│   │       ├── virustotal.js        # VirusTotal analysis
 │   │       └── whois.js             # WHOIS domain age lookup
 │   ├── package.json                 # NPM dependencies
-│   ├── .env.example                 # Environment variables template
-│   ├── .gitignore                   # Git ignore rules
-│   └── Dockerfile                   # Docker container configuration
+│   ├── Dockerfile                   # Docker container configuration
+│   ├── .env                         # Environment variables (gitignored)
+│   └── .env.example                 # Environment variables template
 ├── extension/                        # Browser extension files
 │   ├── manifest.json               # Extension configuration
 │   ├── popup.html                  # Popup interface
@@ -152,9 +166,37 @@ safeextension/
 │   ├── popup.css                   # Popup styling
 │   ├── background.js               # Service worker
 │   ├── content.js                  # Content script for page interaction
+│   ├── blocked.html                # Blocked page interface
+│   ├── blocked.js                  # Blocked page logic
+│   ├── blocked.css                 # Blocked page styling
+│   ├── rules.json                  # Extension rules configuration
 │   └── icons/                      # Extension icons
+├── landing/                         # Landing page website
+│   ├── index.html                  # Main landing page
+│   ├── launch.html                 # Launch/demo page
+│   ├── script.js                   # Landing page JavaScript
+│   ├── styles.css                  # Landing page styles
+│   ├── server.py                   # Python server for landing page
+│   ├── start-server.bat            # Windows server starter
+│   └── README.md                   # Landing page documentation
+├── dist/                           # Build output directory
+├── .env                            # Root environment variables
+├── .env.example                    # Root environment template
 ├── docker-compose.yml              # Docker Compose configuration
-└── README.md                        # This file
+├── API_SPECIFICATION.md            # API documentation
+├── COMPLETION_CHECKLIST.md         # Project completion checklist
+├── DEPLOYMENT_GUIDE.md             # Deployment instructions
+├── FILE_LIST.md                    # File inventory
+├── INDEX.md                        # Project index
+├── LICENSE                         # License file
+├── PRIVACY_POLICY.md               # Privacy policy
+├── PROJECT_DELIVERY.md             # Delivery documentation
+├── PROJECT_STRUCTURE.md            # Detailed project structure
+├── QUICK_DEPLOYMENT.md             # Quick deployment guide
+├── QUICK_START.md                  # Quick start guide
+├── README.md                       # This file
+├── security_test_urls.txt          # Security test URLs
+└── START_HERE.md                   # Getting started guide
 ```
 
 ---
@@ -212,6 +254,20 @@ safeextension/
    - Click "Load unpacked"
    - Navigate to `safeextension/extension/` folder
    - Select and confirm
+
+### Landing Page Setup (Optional)
+
+1. **Navigate to landing directory:**
+   ```bash
+   cd landing
+   ```
+
+2. **Start the server:**
+   - **Windows:** Double-click `start-server.bat` or run `python server.py`
+   - **Linux/Mac:** Run `python3 server.py`
+
+3. **Access the landing page:**
+   - Open `http://localhost:8000` in your browser
 
 ---
 
