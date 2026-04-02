@@ -3,6 +3,10 @@
 
 A comprehensive browser extension that analyzes URLs for phishing, malware, and other security risks in real-time.
 
+# URL
+```
+https://safeextension.vercel.app/
+```
 **⚠️ Development/Educational Use Only - NOT Production Ready**
 ## 📋 Table of Contents
 
