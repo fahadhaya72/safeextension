@@ -10,8 +10,21 @@ import logger from './logger.js';
 import { 
   evaluateURL,
   classify, 
-  analyzeUrlSyntax
+  analyzeUrlSyntax,
+  isValidUrl
 } from './scoring-refactored.js';
+import {
+  hasSuspiciousKeywords,
+  hasAdultContent,
+  isIpObfuscation,
+  isTemporaryService,
+  hasSuspiciousSubdomain,
+  analyzeURLStructure,
+  computeWeightedScore
+} from './scoring.js';
+import { checkSafeBrowsing } from './services/safebrowsing.js';
+import { getDomainAgeDays } from './services/whois.js';
+import { detectBrandImpersonation, getGeographicRisk, analyzeCertificate, getReputationScore, hasSuspiciousTLD } from './advanced-scoring.js';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -125,6 +138,56 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
+
+// Shared result builder for check-url
+function responseFromFactors(url, basicFactors, advancedFactors, extra) {
+  const weighted = computeWeightedScore(basicFactors, advancedFactors);
+  const action = classify(weighted.score);
+
+  return {
+    url,
+    action,
+    score: weighted.score,
+    risk_level: weighted.riskCategory ? weighted.riskCategory.toLowerCase() : 'unknown',
+    reasons: weighted.reasons,
+    confidence: weighted.confidence,
+    details: {
+      ...extra,
+      basicFactors,
+      advancedFactors
+    }
+  };
+}
+
+async function checkRedirects(url) {
+  try {
+    const res = await fetch(url, { method: 'GET', redirect: 'manual' });
+    let redirects = 0;
+    let location = res.headers.get('location');
+    let currentUrl = url;
+    const redirectChain = [];
+
+    while (location && redirects < 10) {
+      redirects++;
+      const nextUrl = new URL(location, currentUrl).toString();
+      redirectChain.push({ from: currentUrl, to: nextUrl, step: redirects });
+
+      const r = await fetch(nextUrl, { method: 'GET', redirect: 'manual' });
+      location = r.headers.get('location');
+      currentUrl = nextUrl;
+    }
+
+    return {
+      count: redirects,
+      excessive: redirects > 3,
+      chain: redirectChain,
+      suspicious: redirectChain.some(r => r.to.includes('bit.ly') || r.to.includes('tinyurl'))
+    };
+  } catch (err) {
+    logger.warn({ err: String(err) }, 'Redirect check failed');
+    return { count: 0, excessive: false, chain: [], suspicious: false };
+  }
+}
 
 // Extension proxy endpoint (no authentication required for security)
 app.post('/api/extension-check', async (req, res) => {
