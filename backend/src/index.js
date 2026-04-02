@@ -8,25 +8,10 @@ import fetch from 'node-fetch';
 import { cache } from './cache.js';
 import logger from './logger.js';
 import { 
-  analyzeUrlSyntax, 
-  computeScore, 
+  evaluateURL,
   classify, 
-  hasSuspiciousKeywords, 
-  hasAdultContent,
-  isValidUrl, 
-  isIpObfuscation, 
-  isTemporaryService, 
-  hasSuspiciousSubdomain,
-  computeAdvancedScore,
-  detectBrandImpersonation,
-  hasSuspiciousTLD,
-  analyzeURLStructure,
-  getGeographicRisk,
-  analyzeCertificate,
-  getReputationScore
-} from './scoring.js';
-import { checkSafeBrowsing } from './services/safebrowsing.js';
-import { getDomainAgeDays } from './services/whois.js';
+  analyzeUrlSyntax
+} from './scoring-refactored.js';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -125,7 +110,7 @@ app.use('/api/', (req, res, next) => {
 // Enhanced rate limiting per API key
 const limiter = rateLimit({ 
   windowMs: 60 * 1000, 
-  max: 30, // Reduced from 60 to 30 for security
+  max: 60, // Increased to 60 req/min for testing
   message: { 
     error: 'rate_limit_exceeded', 
     message: 'Too many requests, please try again later' 
@@ -141,66 +126,84 @@ app.use('/api/', limiter);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
-async function checkRedirects(url) {
+// Extension proxy endpoint (no authentication required for security)
+app.post('/api/extension-check', async (req, res) => {
   try {
-    const res = await fetch(url, { method: 'GET', redirect: 'manual' });
-    let redirects = 0;
-    let location = res.headers.get('location');
-    let currentUrl = url;
-    while (location && redirects < 10) {
-      redirects++;
-      const nextUrl = new URL(location, currentUrl).toString();
-      const r = await fetch(nextUrl, { method: 'GET', redirect: 'manual' });
-      location = r.headers.get('location');
-      currentUrl = nextUrl;
+    const { url } = req.body || {};
+    
+    // Validation: Check if URL is provided
+    if (!url || typeof url !== 'string') {
+      return res.status(400).json({ 
+        error: 'url_required',
+        message: 'URL parameter is required and must be a string'
+      });
     }
-    return { count: redirects, excessive: redirects > 3 };
+
+    // Validation: Check URL length
+    if (url.length > MAX_URL_LENGTH) {
+      return res.status(400).json({ 
+        error: 'url_too_long',
+        message: `URL must be less than ${MAX_URL_LENGTH} characters`
+      });
+    }
+
+    // Validation: Basic URL format check
+    if (!isValidUrl(url)) {
+      return res.status(400).json({ 
+        error: 'invalid_url',
+        message: 'Invalid URL format'
+      });
+    }
+
+    // Trim and normalize the URL
+    const normalizedUrl = url.trim();
+
+    const cacheKey = `check:${normalizedUrl}`;
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      logger.info({ url: normalizedUrl, cached: true }, 'extension_check_cached');
+      return res.json(cached);
+    }
+
+    // Parse URL components
+    const syntax = analyzeUrlSyntax(normalizedUrl);
+    if (!syntax.hostname) {
+      return res.status(400).json({
+        error: 'invalid_url',
+        message: 'Could not parse URL'
+      });
+    }
+
+    // NEW: Use refactored evaluation with rule engine
+    const evaluation = await evaluateURL(normalizedUrl, syntax.hostname);
+
+    const result = {
+      url: normalizedUrl,
+      action: evaluation.action,
+      score: evaluation.score,
+      risk_level: evaluation.riskLevel,
+      reasons: evaluation.reasons,
+      confidence: Math.round(evaluation.confidence),
+      timestamp: new Date().toISOString()
+    };
+
+    cache.set(cacheKey, result);
+    logger.info({ 
+      url: normalizedUrl, 
+      action: result.action, 
+      score: result.score,
+      riskLevel: result.risk_level
+    }, 'extension_check_decision');
+    
+    return res.json(result);
   } catch (err) {
-    logger.warn({ err: String(err) }, 'Redirect check failed');
-    return { count: 0, excessive: false };
+    logger.error({ err: String(err), stack: err.stack }, 'extension_check_error');
+    return res.status(500).json({ 
+      error: 'internal_error',
+      message: 'An error occurred while checking the URL'
+    });
   }
-}
-
-function responseFromFactors(url, basicFactors, advancedFactors, extra) {
-  const { score, classification, reasons } = computeAdvancedScore(basicFactors, advancedFactors);
-  const action = classify(score);
-  return {
-    url,
-    score,
-    action,
-    risk_classification: classification,
-    risk_factors: reasons,
-    details: {
-      ...extra,
-      advanced: {
-        brandImpersonation: advancedFactors.brandImpersonation,
-        geographicRisk: advancedFactors.geographicRisk,
-        reputation: advancedFactors.reputation,
-        certificate: advancedFactors.certificate,
-        urlStructure: advancedFactors.urlStructure
-      }
-    },
-    metadata: {
-      analysis_version: 'advanced',
-      timestamp: new Date().toISOString(),
-      confidence: calculateConfidence(score, reasons.length)
-    }
-  };
-}
-
-// Calculate confidence score
-function calculateConfidence(score, factorCount) {
-  let confidence = 50; // Base confidence
-  
-  // Higher confidence for extreme scores
-  if (score < 20 || score > 90) confidence += 20;
-  else if (score < 40 || score > 80) confidence += 10;
-  
-  // More factors = higher confidence
-  confidence += Math.min(30, factorCount * 3);
-  
-  return Math.min(100, Math.round(confidence));
-}
+});
 
 app.post('/api/check-url', async (req, res) => {
   try {

@@ -1,23 +1,19 @@
 // Content Script for SafeExtension
 // Runs on web pages to detect and highlight suspicious links
 
-// 🔐 CONFIGURATION - Same as popup.js and background.js
-const CONFIG = {
-  API_BASE_URL: 'https://safeextension-backend.onrender.com/api', // Production backend URL
-  API_KEY: '20d429b06738d8a1d48ac296048b747259bf0993d9d9f3e951901dac69a21625', // Production API key
-  EXTENSION_ID: 'your_extension_id_here' // Replace with your actual extension ID
-};
-
-const API_BASE_URL = CONFIG.API_BASE_URL;
-const CACHE_TIME = 10 * 60 * 1000; // 10 minutes
-
 class ContentScriptChecker {
   constructor() {
     this.cache = new Map();
+    this.settings = {
+      enableHighlighting: true,
+      showTrustBadges: true,
+      enableWarnings: true
+    };
     this.initialize();
   }
 
-  initialize() {
+  async initialize() {
+    await this.loadSettings();
     // Scan page for links
     this.scanPageLinks();
     
@@ -26,6 +22,17 @@ class ContentScriptChecker {
     
     // Listen for right-click context menu
     this.setupContextMenu();
+  }
+
+  async loadSettings() {
+    try {
+      const response = await chrome.runtime.sendMessage({ action: 'getSettings' });
+      if (response && response.settings) {
+        this.settings = response.settings;
+      }
+    } catch (e) {
+      console.warn('Failed to load settings:', e);
+    }
   }
 
   scanPageLinks() {
@@ -76,24 +83,16 @@ class ContentScriptChecker {
   async onLinkHover(link, href) {
     // Check cache first
     const cached = this.cache.get(href);
-    if (cached && Date.now() - cached.timestamp < CACHE_TIME) {
+    if (cached && Date.now() - cached.timestamp < 10 * 60 * 1000) { // 10 minutes
       this.highlightLink(link, cached.data);
       return;
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/check-url`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-api-key': CONFIG.API_KEY,
-          'x-extension-id': CONFIG.EXTENSION_ID
-        },
-        body: JSON.stringify({ url: href })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
+      // Use background script for secure API calls
+      const response = await chrome.runtime.sendMessage({ action: 'checkURL', url: href });
+      if (response.success) {
+        const data = response.data;
         this.cache.set(href, { data, timestamp: Date.now() });
         this.highlightLink(link, data);
       }
@@ -108,13 +107,21 @@ class ContentScriptChecker {
     const action = result.action;
     const score = result.score;
 
-    // Remove previous classes
+    // Check if highlighting is enabled
+    if (!this.settings.enableHighlighting) return;
+
+    // Remove previous classes and badges
     link.classList.remove('safe-ext-safe', 'safe-ext-warn', 'safe-ext-danger');
+    const existingBadge = link.querySelector('.safe-ext-badge');
+    if (existingBadge) existingBadge.remove();
 
     // Add appropriate class
     if (action === 'allow') {
       link.classList.add('safe-ext-safe');
       link.title = `SafeExtension: Safe (${score}/100)`;
+      if (this.settings.showTrustBadges) {
+        this.addTrustBadge(link, score);
+      }
     } else if (action === 'warn') {
       link.classList.add('safe-ext-warn');
       link.title = `SafeExtension: Warning (${score}/100)`;
@@ -122,6 +129,27 @@ class ContentScriptChecker {
       link.classList.add('safe-ext-danger');
       link.title = `SafeExtension: Dangerous (${score}/100)`;
     }
+  }
+
+  addTrustBadge(link, score) {
+    // Only add badge for very safe sites (score > 95)
+    if (score <= 95) return;
+
+    const badge = document.createElement('span');
+    badge.className = 'safe-ext-badge';
+    badge.textContent = '🛡️';
+    badge.title = `Verified Safe (${score}/100)`;
+    badge.style.cssText = `
+      display: inline-block;
+      margin-left: 4px;
+      font-size: 12px;
+      vertical-align: middle;
+      opacity: 0.8;
+      transition: opacity 0.2s;
+    `;
+
+    // Position badge after link text
+    link.appendChild(badge);
   }
 
   setupContextMenu() {

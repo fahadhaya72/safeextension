@@ -78,11 +78,59 @@
 
     <div class="footer">
       <p class="footer-text">
-        <a href="https://github.com" target="_blank" title="Settings">⚙️ Settings</a>
+        <a href="#" id="settingsLink" title="Settings">⚙️ Settings</a>
         <a href="https://github.com" target="_blank" title="Help">❓ Help</a>
       </p>
       <p class="version">v1.0.0</p>
     </div>
+
+    <!-- Settings Panel -->
+    <div id="settingsPanel" class="settings-panel hidden">
+      <div class="settings-header">
+        <h2>Settings</h2>
+        <button id="closeSettings" class="close-btn">×</button>
+      </div>
+
+      <div class="settings-content">
+        <div class="setting-group">
+          <h3>Link Highlighting</h3>
+          <label class="setting-item">
+            <input type="checkbox" id="enableHighlighting" checked>
+            <span>Enable link highlighting on web pages</span>
+          </label>
+          <label class="setting-item">
+            <input type="checkbox" id="showTrustBadges" checked>
+            <span>Show trust badges for safe sites</span>
+          </label>
+        </div>
+
+        <div class="setting-group">
+          <h3>Warnings & Alerts</h3>
+          <label class="setting-item">
+            <input type="checkbox" id="enableWarnings" checked>
+            <span>Show warning overlays for suspicious sites</span>
+          </label>
+          <label class="setting-item">
+            <input type="checkbox" id="autoBlock" checked>
+            <span>Automatically block dangerous sites</span>
+          </label>
+        </div>
+
+        <div class="setting-group">
+          <h3>Privacy</h3>
+          <label class="setting-item">
+            <input type="checkbox" id="enableTelemetry" checked>
+            <span>Send anonymous usage statistics</span>
+          </label>
+        </div>
+
+        <div class="settings-actions">
+          <button id="saveSettings" class="primary-btn">Save Settings</button>
+          <button id="resetSettings" class="secondary-btn">Reset to Defaults</button>
+        </div>
+      </div>
+    </div>
+
     <div class="manage-blocked">
       <h3>Manage Blocked Sites</h3>
       <div id="blockedList" class="blocked-list">

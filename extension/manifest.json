@@ -8,7 +8,8 @@
     "scripting",
     "tabs",
     "webRequest",
-    "storage"
+    "storage",
+    "declarativeNetRequest"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -40,6 +41,13 @@
       "run_at": "document_end"
     }
   ],
+  "declarative_net_request": {
+    "rule_resources": [{
+      "id": "dynamic_rules",
+      "enabled": true,
+      "path": "rules.json"
+    }]
+  },
   "web_accessible_resources": [
     {
       "resources": [

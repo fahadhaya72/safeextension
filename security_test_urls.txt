@@ -1,0 +1,135 @@
+🔥 1. Homograph / Punycode Attacks (CRITICAL TEST)
+
+These break weak systems instantly.
+
+https://xn--pple-43d.com
+https://xn--googl-fsa.com
+https://аррӏе.com
+https://gοοgle.com
+
+👉 What you’re testing:
+
+Unicode normalization
+Punycode detection
+Lookalike characters
+
+👉 If your system misses these → your core is broken.
+
+🔥 2. Brand Spoofing + Subdomain Tricks
+https://paypal.secure-login.com
+https://google.account.verify-login.net
+https://amazon.login.security-check.co
+https://facebook.verify-user-access.com
+
+👉 Test:
+
+Subdomain parsing
+Brand detection
+Fake trust domains
+🔥 3. Character Substitution Attacks
+https://paypa1.com
+https://g00gle.com
+https://micr0soft-login.com
+https://faceb00k-security.net
+
+👉 Test:
+
+Levenshtein logic
+substitution mapping (0→o, 1→l)
+🔥 4. URL Shorteners (REDIRECT TEST)
+https://bit.ly/3example
+https://tinyurl.com/example123
+https://t.co/example
+
+👉 What to check:
+
+Do you flag shorteners?
+Do you follow redirect?
+
+👉 If not → easy bypass.
+
+🔥 5. Long & Obfuscated URLs
+https://secure-login-account-verification-update-user-info-paypal.com/login/verify/session/update/index.php?id=123456789
+
+👉 Test:
+
+URL length anomaly
+keyword stuffing detection
+🔥 6. IP-Based URLs
+http://192.168.1.1/login
+http://185.199.110.153/secure-login
+http://0x7f000001/login
+
+👉 Test:
+
+IPv4
+Hex IP
+Local network detection
+🔥 7. JavaScript / Data URL Attacks
+javascript:alert(document.cookie)
+data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==
+
+👉 If your system ignores these → serious flaw.
+
+🔥 8. Suspicious TLDs
+http://secure-login.xyz
+http://paypal-update.top
+http://account-verification.click
+http://bank-login.gq
+
+👉 Test:
+
+TLD risk scoring
+🔥 9. Deep Subdomain Chains
+https://login.secure.verify.account.google.com.malicious.site
+https://a.b.c.d.e.f.g.paypal.com.fake-domain.xyz
+
+👉 Test:
+
+Subdomain depth logic
+real domain extraction
+🔥 10. Legitimate Sites (FALSE POSITIVE TEST)
+https://www.google.com
+https://github.com
+https://amazon.in
+https://stackoverflow.com
+
+👉 If these get flagged → your system is trash.
+
+🧪 11. Real Phishing Feeds (OPTIONAL BUT POWERFUL)
+
+Use these sources:
+
+PhishTank
+OpenPhish
+
+👉 They provide:
+
+Real-world phishing URLs
+Updated datasets
+🧠 12. Custom Crafted Attack (BEST TEST)
+
+You should create your own:
+
+https://paypa1-secure-login-verification-account-update.com
+
+👉 Combine:
+
+brand spoof
+keyword stuffing
+long URL
+⚠️ Reality Check
+
+If your system:
+
+Misses homograph → ❌ FAIL
+Misses shortener → ❌ FAIL
+Flags Google as phishing → ❌ FAIL
+
+👉 Then your scoring engine is not ready.
+
+🚀 Pro Testing Strategy (Do This)
+
+Test each category and track:
+
+URL | Expected | Your Result | Pass/Fail

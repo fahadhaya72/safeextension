@@ -17,28 +17,29 @@
 // Final score = 100 − total deductions, clamped to [0, 100]
 
 import { parse } from 'tldts';
+import logger from './logger.js';
 
 // Advanced brand impersonation detection
 const BRAND_PATTERNS = {
   google: [
-    /googl[e|3|l|e|0].com/gi,
-    /g[o|0][o|0]gl[e|3|l|e|0].com/gi,
-    /googl[e|3|l|e|0]\.net/gi,
-    /g[o|0][o|0]gl[e|3|l|e|0]\.org/gi
+    /googl[e3li0]\.com/gi,
+    /g[o0][o0]gl[e3li0]\.com/gi,
+    /googl[e3li0]\.net/gi,
+    /g[o0][o0]gl[e3li0]\.org/gi
   ],
   amazon: [
-    /amaz[o|0]n.com/gi,
-    /amaz[o|0]n\.[a-z]{2,3}/gi,
+    /amaz[o0]n\.com/gi,
+    /amaz[o0]n\.[a-z]{2,3}/gi,
     /amzn\.to/gi
   ],
   facebook: [
-    /fac[e|3|b]ook.com/gi,
+    /fac[e3b]ook\.com/gi,
     /fb\.com/gi,
-    /faceb[o|0][o|0]k.com/gi
+    /faceb[o0][o0]k\.com/gi
   ],
   paypal: [
-    /paypa[l|1].com/gi,
-    /paypa[l|1]\.[a-z]{2,3}/gi,
+    /paypa[l1]\.com/gi,
+    /paypa[l1]\.[a-z]{2,3}/gi,
     /paypal\.me/gi
   ]
 };
@@ -80,6 +81,17 @@ const ADULT_CONTENT_DOMAINS = [
   'playboy.com', 'playboyplus.com', 'hentaihaven.com', 'nhentai.net', 'hentai2read.com'
 ];
 
+// Normalize domain to ASCII (punycode) to prevent homograph attacks
+export function normalizeDomain(hostname) {
+  try {
+    // Convert IDN to ASCII (punycode)
+    const normalizedHostname = new URL(`https://${hostname}`).hostname;
+    return normalizedHostname;
+  } catch {
+    return hostname.toLowerCase();
+  }
+}
+
 export function isValidUrl(url) {
   try {
     const u = new URL(url);
@@ -106,8 +118,8 @@ export function analyzeUrlSyntax(url) {
 // Detect if domain looks like IP obfuscation (e.g., 125.0.0.1.com, 192.168.1.1.example.com)
 export function isIpObfuscation(hostname) {
   if (!hostname) return false;
-  // Match patterns like "X.X.X.X.something" or "something.X.X.X.X"
-  const ipPattern = /(\d{1,3}\.){3}\d{1,3}/;
+  // Match valid IP addresses (0-255 per octet) embedded in domain names
+  const ipPattern = /(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/;
   return ipPattern.test(hostname);
 }
 
@@ -119,33 +131,366 @@ export function isTemporaryService(hostname) {
     'serveo.net', 'localtunnel.me', 'pagekite.me', 'tunnelto.dev',
     'localho.st', 'xip.io', 'nip.io', 'sslip.io'
   ];
-  return tempServices.some(service => hostname.includes(service));
+  // Use exact domain matching to prevent bypasses
+  const baseDomain = hostname.replace(/^www\./, '');
+  return tempServices.some(service => baseDomain === service || baseDomain.endsWith('.' + service));
+}
+
+// Detect data URLs (can execute arbitrary code)
+export function hasDataUrl(url) {
+  return /^data:/i.test(url);
+}
+
+// Detect JavaScript URLs (can execute arbitrary code)
+export function hasJavaScriptUrl(url) {
+  return /^javascript:/i.test(url);
+}
+
+// Detect URL shorteners (can hide malicious destinations)
+export function hasUrlShortener(hostname) {
+  if (!hostname) return false;
+  const shorteners = [
+    'bit.ly', 'tinyurl.com', 'ow.ly', 'short.link', 'tiny.cc',
+    'goo.gl', 'youtu.be', 'adf.ly', 'rebrand.ly', 'lnkd.in',
+    't.co', 'buff.ly', 'is.gd', 'v.gd', 'tiny.pl'
+  ];
+  const baseDomain = hostname.replace(/^www\./, '');
+  return shorteners.some(short => baseDomain === short || baseDomain.endsWith('.' + short));
+}
+
+// Calculate Shannon entropy of a string (detects randomness)
+export function calculateEntropy(str) {
+  if (!str || str.length === 0) return 0;
+  
+  const charCount = {};
+  for (const char of str) {
+    charCount[char] = (charCount[char] || 0) + 1;
+  }
+  
+  let entropy = 0;
+  const len = str.length;
+  for (const count of Object.values(charCount)) {
+    const p = count / len;
+    entropy -= p * Math.log2(p);
+  }
+  
+  return entropy;
+}
+
+// Detect high-entropy domains (random-looking, potentially DGA-generated)
+export function hasHighEntropyDomain(hostname) {
+  if (!hostname) return false;
+  
+  // Extract domain without TLD
+  const parts = hostname.split('.');
+  if (parts.length < 2) return false;
+  
+  const domain = parts[parts.length - 2]; // Second-level domain
+  if (domain.length < 6) return false; // Too short to analyze
+  
+  const entropy = calculateEntropy(domain);
+  const entropyThreshold = 3.5; // High entropy threshold
+  
+  return entropy > entropyThreshold;
+}
+
+// Detect URL length anomalies
+export function hasUrlLengthAnomaly(url) {
+  if (!url) return false;
+  return url.length > 150; // URLs longer than 150 chars are suspicious
+}
+
+// Analyze subdomain depth
+export function analyzeSubdomainDepth(hostname) {
+  if (!hostname) return { depth: 0, suspicious: false };
+  
+  const parts = hostname.split('.');
+  const depth = parts.length - 2; // Subtract TLD and SLD
+  
+  return {
+    depth,
+    suspicious: depth > 4 // More than 4 subdomains is suspicious
+  };
+}
+
+// Detect character substitutions (l→1, o→0, etc.)
+export function hasCharacterSubstitutions(hostname) {
+  if (!hostname) return false;
+  
+  // Common substitutions in phishing domains
+  const substitutions = [
+    /[l1]/g, // l or 1
+    /[o0]/g, // o or 0
+    /[rn]/g, // r or n (sometimes confused)
+    /[uv]/g, // u or v
+    /[ij]/g  // i or j
+  ];
+  
+  let substitutionCount = 0;
+  for (const pattern of substitutions) {
+    const matches = hostname.match(pattern);
+    if (matches && matches.length > 1) {
+      substitutionCount += matches.length - 1; // Count extra occurrences
+    }
+  }
+  
+  return substitutionCount >= 2; // 2+ suspicious substitutions
+}
+
+// Enhanced domain similarity scoring using optimized Levenshtein
+export function calculateDomainSimilarity(domain1, domain2) {
+  if (!domain1 || !domain2) return 0;
+  
+  const distance = calculateLevenshteinOptimized(domain1, domain2);
+  const maxLength = Math.max(domain1.length, domain2.length);
+  
+  return 1 - (distance / maxLength);
+}
+
+// Optimized Levenshtein distance (2-row rolling window, O(n) space)
+function calculateLevenshteinOptimized(str1, str2) {
+  const len1 = str1.length;
+  const len2 = str2.length;
+  
+  if (len1 === 0) return len2;
+  if (len2 === 0) return len1;
+  
+  // Use two arrays instead of full matrix
+  let prevRow = Array.from({ length: len1 + 1 }, (_, i) => i);
+  let currRow = [0];
+  
+  for (let i = 1; i <= len2; i++) {
+    currRow[0] = i;
+    
+    for (let j = 1; j <= len1; j++) {
+      const cost = str1[j - 1] === str2[i - 1] ? 0 : 1;
+      currRow[j] = Math.min(
+        currRow[j - 1] + 1,      // Insertion
+        prevRow[j] + 1,          // Deletion
+        prevRow[j - 1] + cost    // Substitution
+      );
+    }
+    
+    [prevRow, currRow] = [currRow, prevRow];
+  }
+  
+  return prevRow[len1];
+}
+
+// Detect homograph attacks (visual similarity using different scripts)
+export function detectHomographAttack(hostname) {
+  if (!hostname) return { detected: false, scripts: [], risk: 0 };
+  
+  const scripts = {
+    cyrillic: /[а-яё]/i,
+    greek: /[α-ω]/i,
+    arabic: /[\u0600-\u06FF]/,
+    hebrew: /[\u0590-\u05FF]/,
+    cjk: /[\u4E00-\u9FFF\u3040-\u309F\uAC00-\uD7AF]/,
+    zeroWidth: /[\u200B-\u200F\uFEFF]/, // Zero-width characters
+    bidirectional: /[\u202A-\u202E]/ // Bidirectional override
+  };
+  
+  const detectedScripts = [];
+  let riskScore = 0;
+  
+  for (const [script, pattern] of Object.entries(scripts)) {
+    if (pattern.test(hostname)) {
+      detectedScripts.push(script);
+      
+      // Assign risk scores
+      switch (script) {
+        case 'cyrillic':
+        case 'greek':
+          riskScore += 25; // High risk for Latin lookalikes
+          break;
+        case 'zeroWidth':
+        case 'bidirectional':
+          riskScore += 30; // Very high risk for text manipulation
+          break;
+        case 'arabic':
+        case 'hebrew':
+          riskScore += 15; // Medium risk
+          break;
+        case 'cjk':
+          riskScore += 10; // Lower risk
+          break;
+      }
+    }
+  }
+  
+  return {
+    detected: detectedScripts.length > 0,
+    scripts: detectedScripts,
+    risk: Math.min(50, riskScore) // Cap at 50
+  };
+}
+
+// Consensus threat intelligence checking
+export async function checkThreatIntelligence(url) {
+  const sources = [];
+  let totalConfidence = 0;
+  let positiveSources = 0;
+  const details = {};
+
+  try {
+    // Import services dynamically to avoid circular dependencies
+    const { checkSafeBrowsing } = await import('./services/safebrowsing.js');
+    const { checkPhishTank } = await import('./services/phishtank.js');
+    const { checkVirusTotal } = await import('./services/virustotal.js');
+    const { checkOpenPhish } = await import('./services/openphish.js');
+    const { checkURLhaus } = await import('./services/urlhaus.js');
+
+    // Run all checks in parallel
+    const results = await Promise.allSettled([
+      checkSafeBrowsing(url),
+      checkPhishTank(url),
+      checkVirusTotal(url),
+      checkOpenPhish(url),
+      checkURLhaus(url)
+    ]);
+
+    // Process results
+    const safeBrowsing = results[0].status === 'fulfilled' ? results[0].value : null;
+    const phishTank = results[1].status === 'fulfilled' ? results[1].value : null;
+    const virusTotal = results[2].status === 'fulfilled' ? results[2].value : null;
+    const openPhish = results[3].status === 'fulfilled' ? results[3].value : null;
+    const urlhaus = results[4].status === 'fulfilled' ? results[4].value : null;
+
+    // Collect sources and calculate consensus
+    if (safeBrowsing) {
+      sources.push(safeBrowsing);
+      if (safeBrowsing.listed) {
+        positiveSources++;
+        totalConfidence += 90; // High confidence
+        details.safeBrowsing = safeBrowsing.details;
+      }
+    }
+
+    if (phishTank) {
+      sources.push(phishTank);
+      if (phishTank.listed) {
+        positiveSources++;
+        totalConfidence += phishTank.confidence || 95;
+        details.phishTank = phishTank.details;
+      }
+    }
+
+    if (virusTotal) {
+      sources.push(virusTotal);
+      if (virusTotal.listed) {
+        positiveSources++;
+        totalConfidence += virusTotal.confidence || 50;
+        details.virusTotal = virusTotal.details;
+      }
+    }
+
+    if (openPhish) {
+      sources.push(openPhish);
+      if (openPhish.listed) {
+        positiveSources++;
+        totalConfidence += openPhish.confidence || 90;
+        details.openPhish = openPhish.details;
+      }
+    }
+
+    if (urlhaus) {
+      sources.push(urlhaus);
+      if (urlhaus.listed) {
+        positiveSources++;
+        totalConfidence += urlhaus.confidence || 95;
+        details.urlhaus = urlhaus.details;
+      }
+    }
+
+    // Calculate consensus
+    const consensusConfidence = positiveSources > 0 ? Math.round(totalConfidence / positiveSources) : 0;
+    const consensusListed = positiveSources >= 2 || (positiveSources === 1 && consensusConfidence >= 80);
+
+    return {
+      listed: consensusListed,
+      confidence: consensusConfidence,
+      positiveSources,
+      totalSources: sources.length,
+      sources: sources.map(s => ({ source: s.source, listed: s.listed, note: s.note })),
+      details
+    };
+
+  } catch (err) {
+    logger.error({ err: String(err) }, 'Threat intelligence consensus check failed');
+    return {
+      listed: false,
+      confidence: 0,
+      positiveSources: 0,
+      totalSources: 0,
+      sources: [],
+      details: { error: err.message }
+    };
+  }
 }
 
 // Detect suspiciously long or random subdomains
 export function hasSuspiciousSubdomain(hostname) {
   if (!hostname) return false;
   const parts = hostname.split('.');
-  // Check if subdomain is unusually long or has random-looking patterns
-  const subdomain = parts.length > 2 ? parts[0] : '';
-  if (subdomain.length > 20) return true;
+  if (parts.length <= 2) return false; // No subdomains
   
-  // Check for random-looking patterns (multiple hyphens, random words)
-  const randomPattern = /^[a-z]+(-[a-z]+){2,}$/;
-  return randomPattern.test(subdomain) && subdomain.split('-').length >= 3;
+  let suspicious = false;
+  
+  // Check each subdomain component (skip TLD and SLD)
+  for (let i = 0; i < parts.length - 2; i++) {
+    const subdomain = parts[i];
+    
+    // Check length
+    if (subdomain.length > 20) {
+      suspicious = true;
+      break;
+    }
+    
+    // Check excessive hyphens in any component
+    const hyphenCount = (subdomain.match(/-/g) || []).length;
+    if (hyphenCount > 4) {
+      suspicious = true;
+      break;
+    }
+    
+    // Check for unusual characters
+    if (!/^[a-z0-9-]+$/i.test(subdomain)) {
+      suspicious = true;
+      break;
+    }
+    
+    // Check all numeric
+    if (/^\d+$/.test(subdomain)) {
+      suspicious = true;
+      break;
+    }
+    
+    // Check random-looking patterns (3+ hyphens with short segments)
+    const segments = subdomain.split('-');
+    if (segments.length >= 3) {
+      const hasRandomPattern = segments.every(seg => seg.length <= 3);
+      if (hasRandomPattern) {
+        suspicious = true;
+        break;
+      }
+    }
+  }
+  
+  return suspicious;
 }
 
 // Advanced brand impersonation detection
 export function detectBrandImpersonation(hostname) {
   if (!hostname) return { detected: false, brand: null, confidence: 0 };
   
-  const lowerHostname = hostname.toLowerCase();
+  const normalizedHostname = normalizeDomain(hostname);
   
   for (const [brand, patterns] of Object.entries(BRAND_PATTERNS)) {
     for (const pattern of patterns) {
-      if (pattern.test(lowerHostname)) {
+      if (pattern.test(normalizedHostname)) {
         // Calculate confidence based on similarity
-        const confidence = calculateSimilarityConfidence(lowerHostname, brand);
+        const confidence = calculateSimilarityConfidence(normalizedHostname, brand);
         return { detected: true, brand, confidence };
       }
     }
@@ -156,9 +501,9 @@ export function detectBrandImpersonation(hostname) {
 
 // Calculate visual similarity confidence
 function calculateSimilarityConfidence(hostname, brand) {
-  const levenshteinDistance = calculateLevenshtein(hostname, brand);
+  const distance = calculateLevenshteinOptimized(hostname, brand);
   const maxLength = Math.max(hostname.length, brand.length);
-  const similarity = 1 - (levenshteinDistance / maxLength);
+  const similarity = 1 - (distance / maxLength);
   
   return Math.round(similarity * 100);
 }
@@ -204,15 +549,15 @@ export function hasSuspiciousTLD(hostname) {
 }
 
 // URL structure analysis
-export function analyzeURLStructure(hostname) {
+export function analyzeURLStructure(hostname, url) {
   if (!hostname) return { issues: [], score: 0 };
   
   const issues = [];
   let score = 0;
   
   // Too many subdomains
-  const parts = hostname.split('.');
-  if (parts.length > 4) {
+  const subdomainAnalysis = analyzeSubdomainDepth(hostname);
+  if (subdomainAnalysis.suspicious) {
     issues.push('too_many_subdomains');
     score += 15;
   }
@@ -235,6 +580,24 @@ export function analyzeURLStructure(hostname) {
   if (numericRatio > 0.3) {
     issues.push('numeric_heavy');
     score += 15;
+  }
+  
+  // High entropy (random-looking)
+  if (hasHighEntropyDomain(hostname)) {
+    issues.push('high_entropy');
+    score += 20;
+  }
+  
+  // Character substitutions
+  if (hasCharacterSubstitutions(hostname)) {
+    issues.push('character_substitutions');
+    score += 15;
+  }
+  
+  // URL length anomaly
+  if (url && hasUrlLengthAnomaly(url)) {
+    issues.push('url_too_long');
+    score += 10;
   }
   
   return { issues, score };
@@ -409,75 +772,92 @@ export function computeScore(factors) {
   if (factors.suspiciousSubdomain) { deductions += 20; reasons.push({ code: 'SUSPICIOUS_SUBDOMAIN', points: 20 }); }
 
   const score = Math.max(0, Math.min(100, 100 - deductions));
-  let classification = 'safe';
-  if (score < 40) classification = 'danger';
-  else if (score < 50) classification = 'high_alert';
-  else if (score < 90) classification = 'warning';
-  else classification = 'safe';
+  let classification = 'low';
+  if (score < 40) classification = 'high';
+  else if (score < 70) classification = 'medium';
+  else classification = 'low';
 
   return { score, classification, reasons };
 }
 
-// Enhanced scoring computation
-export function computeAdvancedScore(basicFactors, advancedFactors) {
-  let deductions = 0;
+// NEW: Weighted risk model to prevent single-factor bypass
+export function computeWeightedScore(basicFactors, advancedFactors) {
+  const weights = {
+    noHttps: { weight: 0.15, maxDeduction: 25 },
+    youngDomain: { weight: 0.12, maxDeduction: 30 },
+    listedInFeeds: { weight: 0.40, maxDeduction: 60 },
+    suspiciousKeywords: { weight: 0.08, maxDeduction: 20 },
+    adultContent: { weight: 0.50, maxDeduction: 100 }, // Block adult content
+    excessiveRedirects: { weight: 0.10, maxDeduction: 15 },
+    ipObfuscation: { weight: 0.25, maxDeduction: 50 },
+    temporaryService: { weight: 0.35, maxDeduction: 80 }, // Critical - tunneling services
+    suspiciousSubdomain: { weight: 0.20, maxDeduction: 45 },
+    dataUrl: { weight: 0.60, maxDeduction: 100 }, // Critical - code execution
+    javascriptUrl: { weight: 0.60, maxDeduction: 100 }, // Critical - code execution
+    urlShortener: { weight: 0.30, maxDeduction: 55 }, // High risk - hidden destination
+    brandImpersonation: { weight: 0.30, maxDeduction: 65 },
+    suspiciousTLD: { weight: 0.15, maxDeduction: 25 },
+    geographicRisk: { weight: 0.12, maxDeduction: 30 },
+    certificateIssues: { weight: 0.18, maxDeduction: 35 },
+    lowReputation: { weight: 0.15, maxDeduction: 45 },
+    highEntropy: { weight: 0.22, maxDeduction: 40 }, // Random domains
+    urlTooLong: { weight: 0.08, maxDeduction: 18 }, // Anomalous length
+    characterSubstitutions: { weight: 0.18, maxDeduction: 35 }, // l→1, o→0 patterns
+    homographAttack: { weight: 0.28, maxDeduction: 50 } // Unicode tricks
+  };
+  
+  let riskScore = 0;
+  let totalWeight = 0;
   const reasons = [];
+  const factors = { ...basicFactors, ...advancedFactors };
   
-  // Include basic factors (reduced weights for better accuracy)
-  if (basicFactors.noHttps) { deductions += 15; reasons.push({ code: 'NO_HTTPS', points: 15 }); }
-  if (basicFactors.youngDomain) { deductions += 20; reasons.push({ code: 'YOUNG_DOMAIN', points: 20 }); }
-  if (basicFactors.listedInFeeds) { deductions += 50; reasons.push({ code: 'LISTED_IN_FEEDS', points: 50 }); }
-  if (basicFactors.suspiciousKeywords) { deductions += 12; reasons.push({ code: 'SUSPICIOUS_KEYWORDS', points: 12 }); }
-  if (basicFactors.adultContent) { deductions += 60; reasons.push({ code: 'ADULT_CONTENT', points: 60 }); }
-  if (basicFactors.excessiveRedirects) { deductions += 8; reasons.push({ code: 'EXCESSIVE_REDIRECTS', points: 8 }); }
-  if (basicFactors.ipObfuscation) { deductions += 35; reasons.push({ code: 'IP_OBFUSCATION', points: 35 }); }
-  if (basicFactors.temporaryService) { deductions += 25; reasons.push({ code: 'TEMPORARY_SERVICE', points: 25 }); }
-  if (basicFactors.suspiciousSubdomain) { deductions += 15; reasons.push({ code: 'SUSPICIOUS_SUBDOMAIN', points: 15 }); }
-  
-  // Add advanced factors (reduced weights)
-  if (advancedFactors.brandImpersonation?.detected) {
-    const points = Math.round(35 * (advancedFactors.brandImpersonation.confidence / 100));
-    deductions += points;
-    reasons.push({ code: 'BRAND_IMPERSONATION', points, brand: advancedFactors.brandImpersonation.brand });
+  // Calculate weighted risk score
+  for (const [factor, config] of Object.entries(weights)) {
+    if (factors[factor]) {
+      let confidence = 1.0; // Default confidence
+      
+      // Adjust confidence based on factor type
+      if (factor === 'brandImpersonation' && factors[factor].confidence) {
+        confidence = factors[factor].confidence / 100;
+      } else if (factor === 'geographicRisk' && factors[factor].score) {
+        confidence = factors[factor].score / 25; // Normalize to 0-1
+      } else if (factor === 'certificateIssues' && factors[factor].score) {
+        confidence = factors[factor].score / 30;
+      } else if (factor === 'lowReputation' && factors[factor].score !== undefined) {
+        confidence = (60 - factors[factor].score) / 60; // Higher confidence for lower reputation
+      } else if (factor === 'homographAttack' && factors[factor].risk) {
+        confidence = factors[factor].risk / 50; // Normalize homograph risk
+      }
+      
+      const weightedDeduction = config.weight * config.maxDeduction * confidence;
+      riskScore += weightedDeduction;
+      totalWeight += config.weight;
+      
+      reasons.push({
+        code: factor.toUpperCase(),
+        points: Math.round(weightedDeduction),
+        weight: config.weight,
+        confidence: Math.round(confidence * 100)
+      });
+    }
   }
   
-  if (advancedFactors.suspiciousTLD) {
-    deductions += 15;
-    reasons.push({ code: 'SUSPICIOUS_TLD', points: 15 });
-  }
+  // Normalize to 0-100 scale (100 = safe, 0 = dangerous)
+  const normalizedScore = Math.max(0, Math.min(100, 100 - riskScore));
   
-  if (advancedFactors.urlStructure?.score > 0) {
-    deductions += Math.round(advancedFactors.urlStructure.score * 0.7);
-    reasons.push({ code: 'SUSPICIOUS_STRUCTURE', points: Math.round(advancedFactors.urlStructure.score * 0.7) });
-  }
+  // Determine risk category
+  let riskCategory = 'SAFE';
+  if (normalizedScore < 25) riskCategory = 'DANGEROUS';
+  else if (normalizedScore < 55) riskCategory = 'SUSPICIOUS';
+  else if (normalizedScore < 80) riskCategory = 'MODERATE_RISK';
+  else riskCategory = 'SAFE';
   
-  if (advancedFactors.geographicRisk?.score > 0) {
-    deductions += advancedFactors.geographicRisk.score;
-    reasons.push({ code: 'GEOGRAPHIC_RISK', points: advancedFactors.geographicRisk.score, country: advancedFactors.geographicRisk.country });
-  }
-  
-  if (advancedFactors.certificate?.score > 0) {
-    deductions += advancedFactors.certificate.score;
-    reasons.push({ code: 'CERTIFICATE_ISSUES', points: advancedFactors.certificate.score });
-  }
-  
-  if (advancedFactors.reputation?.score < 60) {
-    const points = Math.round((60 - advancedFactors.reputation.score) * 0.5); // Reduced by 50%
-    deductions += points;
-    reasons.push({ code: 'LOW_REPUTATION', points, reputationScore: advancedFactors.reputation.score });
-  }
-  
-  const score = Math.max(0, Math.min(100, 100 - deductions));
-  
-  // Advanced classification
-  let classification = 'safe';
-  if (score < 20) classification = 'critical';
-  else if (score < 40) classification = 'danger';
-  else if (score < 60) classification = 'high_alert';
-  else if (score < 85) classification = 'warning';
-  else classification = 'safe';
-  
-  return { score, classification, reasons };
+  return {
+    score: Math.round(normalizedScore),
+    riskCategory,
+    reasons,
+    confidence: totalWeight > 0 ? Math.round((totalWeight / Object.keys(weights).length) * 100) : 0
+  };
 }
 
 export function classify(score) {
@@ -488,9 +868,7 @@ export function classify(score) {
   // Score 40-59: HIGH ALERT (show warning)
   // Score < 40: BLOCK PERMANENTLY
   if (score >= 90) return 'allow';
-  if (score >= 85) return 'alert';
-  if (score >= 60) return 'warning';
-  if (score >= 40) return 'high_alert';
+  if (score >= 50) return 'warn';
   return 'block';
 }
 

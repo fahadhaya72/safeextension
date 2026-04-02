@@ -4,9 +4,42 @@
 // 🔐 CONFIGURATION - Replace with your actual values
 const CONFIG = {
   API_BASE_URL: 'https://safeextension-backend.onrender.com/api', // Production backend URL
-  API_KEY: '20d429b06738d8a1d48ac296048b747259bf0993d9d9f3e951901dac69a21625', // Production API key
   EXTENSION_ID: 'your_extension_id_here' // Replace with your actual extension ID
 };
+
+// Settings cache
+let settingsCache = {
+  enableHighlighting: true,
+  showTrustBadges: true,
+  enableWarnings: true,
+  autoBlock: true,
+  enableTelemetry: true
+};
+
+// Load settings on startup
+chrome.runtime.onStartup.addListener(() => {
+  loadSettings();
+});
+
+chrome.runtime.onInstalled.addListener(() => {
+  loadSettings();
+});
+
+function loadSettings() {
+  try {
+    chrome.storage.sync.get({
+      enableHighlighting: true,
+      showTrustBadges: true,
+      enableWarnings: true,
+      autoBlock: true,
+      enableTelemetry: true
+    }, (settings) => {
+      settingsCache = settings;
+    });
+  } catch (e) {
+    console.warn('Failed to load settings:', e);
+  }
+}
 
 // Listen for messages from content scripts and popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -15,27 +48,29 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .then(result => sendResponse({ success: true, data: result }))
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true; // Keep channel open for async response
+  } else if (request.action === 'settingsUpdated') {
+    // Update cached settings
+    settingsCache = request.settings;
+    sendResponse({ success: true });
+    return true;
+  } else if (request.action === 'getSettings') {
+    sendResponse({ settings: settingsCache });
+    return true;
   }
 });
 
 async function checkURL(url) {
   try {
-    const response = await fetch(`${CONFIG.API_BASE_URL}/check-url`, {
+    const response = await fetch(`${CONFIG.API_BASE_URL}/extension-check`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': CONFIG.API_KEY,
-        'x-extension-id': CONFIG.EXTENSION_ID
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({ url })
     });
 
     if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error('Invalid API key - please check configuration');
-      } else if (response.status === 403) {
-        throw new Error('Invalid extension ID - please check configuration');
-      } else if (response.status === 429) {
+      if (response.status === 429) {
         throw new Error('Rate limit exceeded - please try again later');
       }
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -108,9 +143,27 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     const score = typeof result.score === 'number' ? result.score : 100;
 
     if (score < 10) {
-      // Permanently block: store in chrome.storage.sync and redirect
+      // Check if auto-blocking is enabled
+      if (!settingsCache.autoBlock) {
+        // Show warning instead of blocking
+        if (settingsCache.enableWarnings) {
+          try {
+            await chrome.tabs.sendMessage(tabId, { action: 'showWarning', score, level: 'high_alert', url });
+          } catch (e) {
+            // content script may not be injected
+          }
+        }
+        return;
+      }
+
+      // Permanently block: store in chrome.storage.sync and add to blocking rules
       const newBlocked = Array.from(new Set([...(blocked || []), domain]));
       await chrome.storage.sync.set({ blockedDomains: newBlocked });
+      
+      // Add domain to declarative net request rules for real-time blocking
+      await addBlockingRule(domain);
+      
+      // Redirect to blocked interstitial
       await redirectToBlocked(tabId, url, score);
       return;
     }
@@ -133,6 +186,9 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
       return;
     }
     
+    // Check if warnings are enabled
+    if (!settingsCache.enableWarnings) return;
+    
     try {
       await chrome.tabs.sendMessage(tabId, { action: 'showWarning', score, level, url });
     } catch (e) {
@@ -142,3 +198,31 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     console.error('tabs.onUpdated handler error:', e);
   }
 });
+
+// Add domain to declarative net request blocking rules
+async function addBlockingRule(domain) {
+  try {
+    // Get existing rules
+    const existingRules = await chrome.declarativeNetRequest.getDynamicRules();
+    const nextId = existingRules.length > 0 ? Math.max(...existingRules.map(r => r.id)) + 1 : 2;
+    
+    // Add new blocking rule
+    await chrome.declarativeNetRequest.updateDynamicRules({
+      addRules: [{
+        id: nextId,
+        priority: 1,
+        action: {
+          type: 'block'
+        },
+        condition: {
+          urlFilter: `*${domain}*`,
+          resourceTypes: ['main_frame']
+        }
+      }]
+    });
+    
+    console.log(`Added blocking rule for domain: ${domain}`);
+  } catch (error) {
+    console.error('Failed to add blocking rule:', error);
+  }
+}

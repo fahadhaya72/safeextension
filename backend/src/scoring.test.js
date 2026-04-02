@@ -6,7 +6,7 @@ import {
   computeScore, 
   classify, 
   hasSuspiciousKeywords 
-} from '../scoring.js';
+} from './scoring.js';
 
 test('URL Validation', async (t) => {
   await t.test('should validate correct URLs', () => {
@@ -198,7 +198,7 @@ test('Action Classification', async (t) => {
 
   await t.test('should handle boundary score 90 as allow', () => {
     const action = classify(90);
-    assert.strictEqual(action, 'warn');
+    assert.strictEqual(action, 'allow');
   });
 
   await t.test('should handle boundary score 91 as allow', () => {

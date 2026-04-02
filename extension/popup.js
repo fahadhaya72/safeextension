@@ -1,13 +1,5 @@
-// 🔐 CONFIGURATION - Replace with your actual values
-const CONFIG = {
-  // IMPORTANT: Replace with your actual values
-  API_BASE_URL: 'https://safeextension-backend.onrender.com/api', // Production backend URL
-  API_KEY: '20d429b06738d8a1d48ac296048b747259bf0993d9d9f3e951901dac69a21625', // Production API key
-  EXTENSION_ID: 'your_extension_id_here' // Replace with your actual extension ID
-};
-
-const API_BASE_URL = CONFIG.API_BASE_URL; // Use CONFIG.API_BASE_URL
-const CACHE_TIME = 5 * 60 * 1000; // 5 minutes
+// Popup script for SafeExtension
+// Handles user interface and communicates with background script
 
 class URLChecker {
   constructor() {
@@ -15,6 +7,7 @@ class URLChecker {
     this.initializeElements();
     this.attachEventListeners();
     this.getCurrentTabUrl();
+    this.loadBlockedDomains();
   }
 
   initializeElements() {
@@ -27,6 +20,18 @@ class URLChecker {
     this.copyBtn = document.getElementById('copyBtn');
     this.blockedList = document.getElementById('blockedList');
     this.refreshBlockedBtn = document.getElementById('refreshBlocked');
+
+    // Settings elements
+    this.settingsLink = document.getElementById('settingsLink');
+    this.settingsPanel = document.getElementById('settingsPanel');
+    this.closeSettings = document.getElementById('closeSettings');
+    this.enableHighlighting = document.getElementById('enableHighlighting');
+    this.showTrustBadges = document.getElementById('showTrustBadges');
+    this.enableWarnings = document.getElementById('enableWarnings');
+    this.autoBlock = document.getElementById('autoBlock');
+    this.enableTelemetry = document.getElementById('enableTelemetry');
+    this.saveSettings = document.getElementById('saveSettings');
+    this.resetSettings = document.getElementById('resetSettings');
   }
 
   attachEventListeners() {
@@ -36,6 +41,15 @@ class URLChecker {
     });
     this.copyBtn.addEventListener('click', () => this.copyResult());
     this.refreshBlockedBtn.addEventListener('click', () => this.loadBlockedDomains());
+
+    // Settings event listeners
+    this.settingsLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.showSettingsPanel();
+    });
+    this.closeSettings.addEventListener('click', () => this.hideSettingsPanel());
+    this.saveSettings.addEventListener('click', () => this.saveSettingsPanel());
+    this.resetSettings.addEventListener('click', () => this.resetSettingsToDefaults());
   }
 
   getCurrentTabUrl() {
@@ -72,28 +86,14 @@ class URLChecker {
     this.showLoader();
 
     try {
-      const response = await fetch(`${CONFIG.API_BASE_URL}/check-url`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': CONFIG.API_KEY,
-          'x-extension-id': CONFIG.EXTENSION_ID
-        },
-        body: JSON.stringify({ url: normalizedUrl })
-      });
+      // Use background script for secure API communication
+      const response = await chrome.runtime.sendMessage({ action: 'checkURL', url: normalizedUrl });
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Invalid API key - please check configuration');
-        } else if (response.status === 403) {
-          throw new Error('Invalid extension ID - please check configuration');
-        } else if (response.status === 429) {
-          throw new Error('Rate limit exceeded - please try again later');
-        }
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to check URL');
       }
 
-      const data = await response.json();
+      const data = response.data;
 
       // Cache the result
       this.lastResults.set(normalizedUrl, {
@@ -333,4 +333,62 @@ URLChecker.prototype.unblockDomain = function(domain) {
   } catch (e) {
     console.warn('Failed to unblock domain:', e);
   }
+}
+
+// Settings panel methods
+URLChecker.prototype.showSettingsPanel = function() {
+  this.loadSettings();
+  this.settingsPanel.classList.remove('hidden');
+}
+
+URLChecker.prototype.hideSettingsPanel = function() {
+  this.settingsPanel.classList.add('hidden');
+}
+
+URLChecker.prototype.loadSettings = function() {
+  try {
+    chrome.storage.sync.get({
+      enableHighlighting: true,
+      showTrustBadges: true,
+      enableWarnings: true,
+      autoBlock: true,
+      enableTelemetry: true
+    }, (settings) => {
+      this.enableHighlighting.checked = settings.enableHighlighting;
+      this.showTrustBadges.checked = settings.showTrustBadges;
+      this.enableWarnings.checked = settings.enableWarnings;
+      this.autoBlock.checked = settings.autoBlock;
+      this.enableTelemetry.checked = settings.enableTelemetry;
+    });
+  } catch (e) {
+    console.warn('Failed to load settings:', e);
+  }
+}
+
+URLChecker.prototype.saveSettingsPanel = function() {
+  const settings = {
+    enableHighlighting: this.enableHighlighting.checked,
+    showTrustBadges: this.showTrustBadges.checked,
+    enableWarnings: this.enableWarnings.checked,
+    autoBlock: this.autoBlock.checked,
+    enableTelemetry: this.enableTelemetry.checked
+  };
+
+  try {
+    chrome.storage.sync.set(settings, () => {
+      this.hideSettingsPanel();
+      // Notify background script of settings change
+      chrome.runtime.sendMessage({ action: 'settingsUpdated', settings });
+    });
+  } catch (e) {
+    console.warn('Failed to save settings:', e);
+  }
+}
+
+URLChecker.prototype.resetSettingsToDefaults = function() {
+  this.enableHighlighting.checked = true;
+  this.showTrustBadges.checked = true;
+  this.enableWarnings.checked = true;
+  this.autoBlock.checked = true;
+  this.enableTelemetry.checked = true;
 }
