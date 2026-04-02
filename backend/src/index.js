@@ -101,6 +101,9 @@ app.use('/api/', (req, res, next) => {
   
   // Check API key
   if (!API_KEY || providedKey !== API_KEY) {
+    if (process.env.NODE_ENV !== 'production') {
+      logger.warn({ expectedApiKey: API_KEY, providedApiKey: providedKey, ip: req.ip }, 'API key mismatch debug');
+    }
     logger.warn({ ip: req.ip, userAgent: req.get('User-Agent') }, 'Unauthorized API access attempt');
     return res.status(401).json({ 
       error: 'unauthorized',
@@ -355,10 +358,15 @@ app.post('/api/check-url', async (req, res) => {
     return res.json(result);
   } catch (err) {
     logger.error({ err: String(err), stack: err.stack }, 'check_url_error');
-    return res.status(500).json({ 
+    const response = {
       error: 'internal_error',
       message: 'An error occurred while checking the URL'
-    });
+    };
+    if (process.env.NODE_ENV !== 'production') {
+      response.detail = err.message;
+      response.trace = err.stack;
+    }
+    return res.status(500).json(response);
   }
 });
 
@@ -443,10 +451,15 @@ app.post('/api/risk-details', async (req, res) => {
     return res.json(result);
   } catch (err) {
     logger.error({ err: String(err), stack: err.stack }, 'risk_details_error');
-    return res.status(500).json({ 
+    const response = {
       error: 'internal_error',
       message: 'An error occurred while analyzing the URL'
-    });
+    };
+    if (process.env.NODE_ENV !== 'production') {
+      response.detail = err.message;
+      response.trace = err.stack;
+    }
+    return res.status(500).json(response);
   }
 });
 
