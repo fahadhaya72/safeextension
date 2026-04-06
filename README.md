@@ -178,6 +178,7 @@ safeextension/
 
 1. **Clone/Extract the repository:**
    ```bash
+   git clone https://github.com/fahadhaya72/safeextension.git
    cd safeextension
    ```
 
