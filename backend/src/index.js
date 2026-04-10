@@ -108,7 +108,12 @@ const limiter = createAuthenticatedRateLimit({
   max: 60 // 60 req/min per authenticated user
 });
 
-app.use('/api/', limiter);
+// Apply rate limiting to specific endpoints only
+app.use('/api/token', limiter);
+app.use('/api/check-url', limiter);
+app.use('/api/risk-details', limiter);
+app.use('/api/feedback', limiter);
+app.use('/api/stats', limiter);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
