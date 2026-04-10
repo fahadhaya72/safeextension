@@ -196,13 +196,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         console.log('[SafeExtension] Normalized URL:', normalized);
         const fetchStart = performance.now();
-        console.log('[SafeExtension] Calling API at:', `${CONFIG.API_BASE}/extension-check`);
+        console.log('[SafeExtension] Calling API at:', `${CONFIG.API_BASE}/check-url`);
 
         // Add timeout to prevent hanging
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-        const response = await fetch(`${CONFIG.API_BASE}/extension-check`, {
+        const response = await fetch(`${CONFIG.API_BASE}/check-url`, {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',

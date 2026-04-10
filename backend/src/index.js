@@ -95,9 +95,8 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(morgan('combined'));
 
-// JWT Authentication Middleware (exclude extension-check and health endpoints)
+// JWT Authentication Middleware (exclude check-url, extension-check and health endpoints)
 app.use('/api/token', authenticateRequest);
-app.use('/api/check-url', authenticateRequest);
 app.use('/api/risk-details', authenticateRequest);
 app.use('/api/feedback', authenticateRequest);
 app.use('/api/stats', authenticateRequest);
@@ -110,7 +109,6 @@ const limiter = createAuthenticatedRateLimit({
 
 // Apply rate limiting to specific endpoints only
 app.use('/api/token', limiter);
-app.use('/api/check-url', limiter);
 app.use('/api/risk-details', limiter);
 app.use('/api/feedback', limiter);
 app.use('/api/stats', limiter);
@@ -370,49 +368,27 @@ app.post('/api/check-url', async (req, res) => {
       return res.json(cached);
     }
 
-    // Basic analysis
+    // Parse URL components
     const syntax = analyzeUrlSyntax(normalizedUrl);
-    const basicFactors = {
-      noHttps: syntax.protocol !== 'https',
-      suspiciousKeywords: hasSuspiciousKeywords(normalizedUrl),
-      adultContent: hasAdultContent(normalizedUrl),
-      ipObfuscation: isIpObfuscation(syntax.hostname),
-      temporaryService: isTemporaryService(syntax.hostname),
-      suspiciousSubdomain: hasSuspiciousSubdomain(syntax.hostname)
+    if (!syntax.hostname) {
+      return res.status(400).json({
+        error: 'invalid_url',
+        message: 'Could not parse URL'
+      });
+    }
+
+    // Use the same evaluateURL function as extension-check with trusted domains
+    const evaluation = await evaluateURL(normalizedUrl, syntax.hostname);
+
+    const result = {
+      url: normalizedUrl,
+      action: evaluation.action,
+      score: evaluation.score,
+      risk_level: evaluation.riskLevel,
+      reasons: evaluation.reasons,
+      confidence: Math.round(evaluation.confidence),
+      timestamp: new Date().toISOString()
     };
-
-    // Advanced analysis (parallel execution)
-    const [sb, domainAgeDays, redirects, brandImpersonation, geographicRisk, certificate, reputation] = await Promise.all([
-      checkSafeBrowsing(normalizedUrl),
-      getDomainAgeDays(normalizedUrl),
-      checkRedirects(normalizedUrl),
-      detectBrandImpersonation(syntax.hostname),
-      getGeographicRisk(syntax.hostname),
-      analyzeCertificate(syntax.hostname),
-      getReputationScore(syntax.domain)
-    ]);
-
-    // Complete basic factors
-    basicFactors.youngDomain = (domainAgeDays !== null) ? domainAgeDays < 180 : false;
-    basicFactors.listedInFeeds = !!sb.listed;
-    basicFactors.excessiveRedirects = redirects.excessive;
-
-    // Advanced factors
-    const advancedFactors = {
-      brandImpersonation,
-      geographicRisk,
-      certificate,
-      reputation,
-      urlStructure: analyzeURLStructure(syntax.hostname),
-      suspiciousTLD: hasSuspiciousTLD(syntax.hostname)
-    };
-
-    const result = responseFromFactors(normalizedUrl, basicFactors, advancedFactors, {
-      domainAgeDays,
-      safeBrowsing: sb,
-      redirects: redirects.count,
-      redirectChain: redirects.chain || []
-    });
 
     cache.set(cacheKey, result);
     logger.info({ url: normalizedUrl, action: result.action, score: result.score }, 'decision');

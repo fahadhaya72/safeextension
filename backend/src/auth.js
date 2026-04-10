@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import logger from './logger.js';
+import rateLimit from 'express-rate-limit';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
@@ -60,8 +61,8 @@ export function verifyApiKey(apiKey, hashedKey) {
 
 // Middleware to authenticate requests
 export function authenticateRequest(req, res, next) {
-  // Skip authentication for health check and extension-check
-  if (req.path === '/health' || req.path === '/extension-check') {
+  // Skip authentication for health check, extension-check, and check-url
+  if (req.path === '/health' || req.path === '/extension-check' || req.path === '/check-url') {
     return next();
   }
 
@@ -120,8 +121,6 @@ export function authenticateRequest(req, res, next) {
 
 // Rate limiting middleware that considers authenticated users
 export function createAuthenticatedRateLimit(options = {}) {
-  const rateLimit = require('express-rate-limit');
-  
   return rateLimit({
     windowMs: options.windowMs || 60 * 1000, // 1 minute
     max: options.max || 60, // 60 requests per window
