@@ -45,7 +45,20 @@ export async function evaluateURL(url, hostname) {
   };
 
   try {
-    // STEP 1: Adult content check (automatic BLOCK)
+    // STEP 1: Trusted domains check (automatic ALLOW with high score)
+    const trustedCheck = checkTrustedDomain(hostname);
+    if (trustedCheck.isTrusted) {
+      return {
+        action: 'allow',
+        score: 100,
+        riskLevel: 'none',
+        reasons: ['Trusted domain'],
+        confidence: 100,
+        type: 'trusted-domain'
+      };
+    }
+
+    // STEP 2: Adult content check (automatic BLOCK)
     const adultCheck = checkAdultContent(url, hostname);
     if (adultCheck.isAdult) {
       return {
@@ -58,7 +71,7 @@ export async function evaluateURL(url, hostname) {
       };
     }
 
-    // STEP 2: Apply strict rules (before scoring)
+    // STEP 3: Apply strict rules (before scoring)
     const { shouldBlock, shouldWarn, reasons: ruleReasons } = evaluateRules(url, hostname);
     
     if (shouldBlock) {
@@ -96,6 +109,112 @@ export async function evaluateURL(url, hostname) {
       error: true
     };
   }
+}
+
+// ============ TRUSTED DOMAINS CHECK ============
+
+// Comprehensive trusted domains list (same as rule-engine)
+const TRUSTED_DOMAINS_LIST = [
+  // Search & Web Browsers
+  'google.com', 'google.co.uk', 'google.ca', 'google.fr', 'google.de',
+  'bing.com', 'duckduckgo.com', 'yandex.com', 'baidu.com',
+  
+  // Video Platforms
+  'youtube.com', 'youtu.be', 'vimeo.com', 'dailymotion.com',
+  
+  // Social Media
+  'facebook.com', 'fb.com', 'fbcdn.net', 'twitter.com', 'x.com',
+  'instagram.com', 'linkedin.com', 'reddit.com', 'tiktok.com',
+  'snapchat.com', 'pinterest.com', 'nextdoor.com',
+  
+  // AI/ML Platforms
+  'openai.com', 'chat.openai.com', 'chatgpt.com', 'anthropic.com',
+  'claude.ai', 'google.ai', 'deepmind.com', 'huggingface.co',
+  'perplexity.ai', 'github.com/copilot',
+  
+  // Tech Giants
+  'microsoft.com', 'apple.com', 'icloud.com', 'amazon.com',
+  'github.com', 'gitlab.com', 'bitbucket.org', 'sourceforge.net',
+  
+  // Email & Communication
+  'gmail.com', 'outlook.com', 'hotmail.com', 'yahoo.com',
+  'protonmail.com', 'proton.me', 'tutanota.com', 'mail.google.com',
+  
+  // Developer & Tech Communities
+  'stackoverflow.com', 'dev.to', 'medium.com', 'hashnode.com',
+  'freecodecamp.org', 'w3schools.com', 'mdn.mozilla.org',
+  
+  // News & Media
+  'bbc.com', 'bbc.co.uk', 'cnn.com', 'reuters.com', 'apnews.com',
+  'nytimes.com', 'theguardian.com', 'aljazeera.com', 'npr.org',
+  'pbs.org', 'politico.com',
+  
+  // Entertainment & Streaming
+  'netflix.com', 'hulu.com', 'disneyplus.com', 'primevideo.com',
+  'hbo.com', 'hbomax.com', 'peacock.com', 'paramount.com',
+  'spotify.com', 'music.apple.com', 'deezer.com',
+  
+  // Finance & Payments
+  'paypal.com', 'stripe.com', 'square.com', 'coinbase.com',
+  'kraken.com', 'binance.com', 'bitstamp.net',
+  
+  // Banking (Major International Banks)
+  'bankofamerica.com', 'chase.com', 'wellsfargo.com', 'citibank.com',
+  'hsbc.com', 'barclays.com', 'ing.com', 'bnp.fr',
+  'santander.com', 'deutschebank.de',
+  
+  // Shopping & Retail
+  'amazon.com', 'ebay.com', 'walmart.com', 'bestbuy.com',
+  'target.com', 'macys.com', 'nordstrom.com', 'etsy.com',
+  
+  // Reference & Education
+  'wikipedia.org', 'wikimedia.org', 'coursera.org', 'udemy.com',
+  'edx.org', 'khanacademy.org', 'mit.edu', 'stanford.edu',
+  'harvard.edu', 'oxford.edu', 'cambridge.edu',
+  
+  // Government & Official
+  'gov.uk', 'gov.us', 'irs.gov', 'dmv.org', 'whitehouse.gov',
+  'parliament.uk',
+  
+  // Cloud Services & Storage
+  'drive.google.com', 'dropbox.com', 'onedrive.com', 'icloud.com',
+  'aws.amazon.com', 'azure.microsoft.com', 'cloud.google.com',
+  
+  // Office & Productivity
+  'office.com', 'office365.com', 'sheets.google.com',
+  'docs.google.com', 'notion.so', 'asana.com', 'monday.com',
+  'trello.com', 'slack.com', 'zoom.us', 'teams.microsoft.com',
+  'meet.google.com',
+  
+  // Travel & Booking
+  'booking.com', 'expedia.com', 'kayak.com', 'tripadvisor.com',
+  'airbnb.com', 'hotels.com', 'skyscanner.com',
+  
+  // Health & Wellness
+  'webmd.com', 'mayoclinic.org', 'healthline.com', 'cdc.gov',
+  'who.int', 'nhs.uk'
+];
+
+function getTrustedDomains() {
+  return TRUSTED_DOMAINS_LIST;
+}
+
+function checkTrustedDomain(hostname) {
+  if (!hostname) return { isTrusted: false };
+  
+  const trustedDomains = getTrustedDomains();
+  const lowerHostname = hostname.toLowerCase();
+  
+  // Check exact match and subdomain match
+  for (const trustedDomain of trustedDomains) {
+    if (lowerHostname === trustedDomain || 
+        lowerHostname.endsWith('.' + trustedDomain) ||
+        lowerHostname.startsWith('www.' + trustedDomain)) {
+      return { isTrusted: true, domain: trustedDomain };
+    }
+  }
+  
+  return { isTrusted: false };
 }
 
 // ============ ADULT CONTENT CHECK ============
