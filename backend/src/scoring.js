@@ -731,7 +731,7 @@ export async function getGeographicRisk(hostname) {
     const ip = ipData.Answer[0].data;
     
     // Get geographic information
-    const geoResponse = await fetch(`http://ip-api.com/json/${ip}`);
+    const geoResponse = await fetch(`https://ip-api.com/json/${ip}`);
     const geoData = await geoResponse.json();
     
     if (geoData.status !== 'success') {

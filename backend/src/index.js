@@ -177,6 +177,11 @@ function responseFromFactors(url, basicFactors, advancedFactors, extra) {
 
 async function checkRedirects(url) {
   try {
+    // Validate URL before making requests
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return { count: 0, excessive: false, chain: [], suspicious: false };
+    }
+
     const res = await fetch(url, { method: 'GET', redirect: 'manual' });
     let redirects = 0;
     let location = res.headers.get('location');
@@ -185,12 +190,25 @@ async function checkRedirects(url) {
 
     while (location && redirects < 10) {
       redirects++;
-      const nextUrl = new URL(location, currentUrl).toString();
-      redirectChain.push({ from: currentUrl, to: nextUrl, step: redirects });
+      
+      // Validate redirect URL
+      try {
+        const nextUrl = new URL(location, currentUrl).toString();
+        
+        // Only follow HTTP/HTTPS URLs
+        if (!nextUrl.startsWith('http://') && !nextUrl.startsWith('https://')) {
+          break;
+        }
+        
+        redirectChain.push({ from: currentUrl, to: nextUrl, step: redirects });
 
-      const r = await fetch(nextUrl, { method: 'GET', redirect: 'manual' });
-      location = r.headers.get('location');
-      currentUrl = nextUrl;
+        const r = await fetch(nextUrl, { method: 'GET', redirect: 'manual' });
+        location = r.headers.get('location');
+        currentUrl = nextUrl;
+      } catch (urlError) {
+        // Break on invalid URL construction
+        break;
+      }
     }
 
     return {
@@ -375,11 +393,7 @@ app.post('/api/check-url', async (req, res) => {
       error: 'internal_error',
       message: 'An error occurred while checking the URL'
     };
-    if (process.env.NODE_ENV !== 'production') {
-      response.detail = err.message;
-      response.trace = err.stack;
-    }
-    return res.status(500).json(response);
+        return res.status(500).json(response);
   }
 });
 
@@ -468,11 +482,7 @@ app.post('/api/risk-details', async (req, res) => {
       error: 'internal_error',
       message: 'An error occurred while analyzing the URL'
     };
-    if (process.env.NODE_ENV !== 'production') {
-      response.detail = err.message;
-      response.trace = err.stack;
-    }
-    return res.status(500).json(response);
+        return res.status(500).json(response);
   }
 });
 
