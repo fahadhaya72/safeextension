@@ -95,8 +95,12 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(morgan('combined'));
 
-// JWT Authentication Middleware
-app.use('/api/', authenticateRequest);
+// JWT Authentication Middleware (exclude extension-check and health endpoints)
+app.use('/api/token', authenticateRequest);
+app.use('/api/check-url', authenticateRequest);
+app.use('/api/risk-details', authenticateRequest);
+app.use('/api/feedback', authenticateRequest);
+app.use('/api/stats', authenticateRequest);
 
 // Enhanced rate limiting per authenticated user
 const limiter = createAuthenticatedRateLimit({ 
