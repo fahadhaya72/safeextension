@@ -117,6 +117,24 @@ app.use('/api/stats', limiter);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
+// Simple test endpoint for ChatGPT scoring (no auth required)
+app.post('/api/test-chatgpt', async (req, res) => {
+  try {
+    const result = {
+      url: 'https://chatgpt.com',
+      action: 'allow',
+      score: 100,
+      risk_level: 'none',
+      reasons: ['Trusted domain'],
+      confidence: 100,
+      timestamp: new Date().toISOString()
+    };
+    return res.json(result);
+  } catch (err) {
+    return res.status(500).json({ error: 'Test failed' });
+  }
+});
+
 // Token generation endpoint for extension authentication
 app.post('/api/token', async (req, res) => {
   try {
