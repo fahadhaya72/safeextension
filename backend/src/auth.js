@@ -60,8 +60,8 @@ export function verifyApiKey(apiKey, hashedKey) {
 
 // Middleware to authenticate requests
 export function authenticateRequest(req, res, next) {
-  // Skip authentication for health check
-  if (req.path === '/health') {
+  // Skip authentication for health check and extension-check
+  if (req.path === '/health' || req.path === '/extension-check') {
     return next();
   }
 
