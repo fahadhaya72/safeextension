@@ -282,16 +282,32 @@ function calculateEntropy(str) {
 
 function countCharacterSubstitutions(hostname) {
   let count = 0;
-  const patterns = [
-    /[0o]/g,  // 0 or o
-    /[1lI]/g, // 1 or l or I
-    /[5s]/g,  // 5 or s
-    /[@a]/g   // @ or a
-  ];
   
-  for (const pattern of patterns) {
-    const matches = hostname.match(pattern) || [];
-    if (matches.length > 1) count++;
+  // Only count actual suspicious substitutions, not normal characters
+  // Look for mixed usage of similar characters in the same word
+  const words = hostname.split('.');
+  
+  for (const word of words) {
+    if (word.length < 3) continue; // Skip very short words
+    
+    // Check for mixed 0/o usage
+    const hasZero = word.includes('0');
+    const hasLetterO = word.includes('o');
+    if (hasZero && hasLetterO) count++;
+    
+    // Check for mixed 1/l/I usage  
+    const hasOne = word.includes('1');
+    const hasLetterL = word.includes('l');
+    const hasLetterI = word.includes('I');
+    if ((hasOne && hasLetterL) || (hasOne && hasLetterI) || (hasLetterL && hasLetterI)) count++;
+    
+    // Check for mixed 5/s usage
+    const hasFive = word.includes('5');
+    const hasLetterS = word.includes('s');
+    if (hasFive && hasLetterS) count++;
+    
+    // Check for @/a usage (only suspicious if @ is used)
+    if (word.includes('@') && word.includes('a')) count++;
   }
   
   return count;

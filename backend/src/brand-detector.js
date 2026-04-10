@@ -3,63 +3,226 @@
  * Detects brand impersonation with similarity scoring
  */
 
-// Official brand domains whitelist
-const OFFICIAL_BRANDS = {
-  'google': {
-    domains: ['google.com', 'google.co.uk', 'google.in', 'google.fr', 'google.de'],
-    keywords: ['google.com'],
-    tlds: ['com']
-  },
-  'paypal': {
-    domains: ['paypal.com', 'paypal.co.uk', 'paypal.de'],
-    keywords: ['paypal'],
-    tlds: ['com']
-  },
-  'amazon': {
-    domains: ['amazon.com', 'amazon.in', 'amazon.co.uk', 'amazon.de', 'amazon.fr'],
-    keywords: ['amazon'],
-    tlds: ['com']
-  },
-  'facebook': {
-    domains: ['facebook.com', 'fb.com'],
-    keywords: ['facebook'],
-    tlds: ['com']
-  },
-  'microsoft': {
-    domains: ['microsoft.com', 'outlook.com', 'live.com'],
-    keywords: ['microsoft', 'outlook'],
-    tlds: ['com']
-  },
-  'apple': {
-    domains: ['apple.com', 'icloud.com'],
-    keywords: ['apple'],
-    tlds: ['com']
-  },
-  'github': {
-    domains: ['github.com'],
-    keywords: ['github'],
-    tlds: ['com']
-  },
-  'linkedin': {
-    domains: ['linkedin.com'],
-    keywords: ['linkedin'],
-    tlds: ['com']
-  },
-  'twitter': {
-    domains: ['twitter.com', 'x.com'],
-    keywords: ['twitter'],
-    tlds: ['com']
-  },
-  'spotify': {
-    domains: ['spotify.com'],
-    keywords: ['spotify'],
-    tlds: ['com']
+// Comprehensive trusted domains whitelist
+const TRUSTED_DOMAINS = {
+  // Search & Web Browsers
+  search: [
+    'google.com', 'google.co.uk', 'google.ca', 'google.fr', 'google.de',
+    'bing.com', 'duckduckgo.com', 'yandex.com', 'baidu.com'
+  ],
+
+  // Video Platforms
+  video: [
+    'youtube.com', 'youtu.be',
+    'vimeo.com',
+    'dailymotion.com'
+  ],
+
+  // Social Media
+  social: [
+    'facebook.com', 'fb.com', 'fbcdn.net',
+    'twitter.com', 'x.com',
+    'instagram.com',
+    'linkedin.com',
+    'reddit.com',
+    'tiktok.com',
+    'snapchat.com',
+    'pinterest.com',
+    'nextdoor.com'
+  ],
+
+  // AI/ML Platforms
+  ai: [
+    'openai.com', 'chatgpt.com',
+    'anthropic.com', 'claude.ai',
+    'google.ai', 'deepmind.com',
+    'huggingface.co',
+    'perplexity.ai',
+    'github.com/copilot'
+  ],
+
+  // Tech Giants
+  tech: [
+    'microsoft.com',
+    'apple.com', 'icloud.com',
+    'amazon.com',
+    'github.com',
+    'gitlab.com',
+    'bitbucket.org',
+    'sourceforge.net'
+  ],
+
+  // Email & Communication
+  email: [
+    'gmail.com',
+    'outlook.com', 'hotmail.com',
+    'yahoo.com',
+    'protonmail.com', 'proton.me',
+    'tutanota.com',
+    'mail.google.com'
+  ],
+
+  // Developer & Tech Communities
+  developer: [
+    'stackoverflow.com',
+    'dev.to',
+    'medium.com',
+    'hashnode.com',
+    'freecodecamp.org',
+    'w3schools.com',
+    'mdn.mozilla.org'
+  ],
+
+  // News & Media
+  news: [
+    'bbc.com', 'bbc.co.uk',
+    'cnn.com',
+    'reuters.com',
+    'apnews.com',
+    'nytimes.com',
+    'theguardian.com',
+    'aljazeera.com',
+    'npr.org',
+    'pbs.org',
+    'politico.com'
+  ],
+
+  // Entertainment & Streaming
+  entertainment: [
+    'netflix.com',
+    'hulu.com',
+    'disneyplus.com',
+    'primevideo.com',
+    'hbo.com', 'hbomax.com',
+    'peacock.com',
+    'paramount.com',
+    'spotify.com',
+    'music.apple.com',
+    'deezer.com'
+  ],
+
+  // Finance & Payments
+  finance: [
+    'paypal.com',
+    'stripe.com',
+    'square.com',
+    'coinbase.com',
+    'kraken.com',
+    'binance.com',
+    'bitstamp.net'
+  ],
+
+  // Banking (Major International Banks)
+  banking: [
+    'bankofamerica.com',
+    'chase.com',
+    'wellsfargo.com',
+    'citibank.com',
+    'hsbc.com',
+    'barclays.com',
+    'ing.com',
+    'bnp.fr',
+    'santander.com',
+    'deutschebank.de'
+  ],
+
+  // Shopping & Retail
+  shopping: [
+    'amazon.com',
+    'ebay.com',
+    'walmart.com',
+    'bestbuy.com',
+    'target.com',
+    'macys.com',
+    'nordstrom.com',
+    'etsy.com'
+  ],
+
+  // Reference & Education
+  education: [
+    'wikipedia.org',
+    'wikimedia.org',
+    'coursera.org',
+    'udemy.com',
+    'edx.org',
+    'khanacademy.org',
+    'mit.edu',
+    'stanford.edu',
+    'harvard.edu',
+    'oxford.edu',
+    'cambridge.edu'
+  ],
+
+  // Government & Official
+  government: [
+    'gov.uk',
+    'gov.us',
+    'irs.gov',
+    'dmv.org',
+    'whitehouse.gov',
+    'parliament.uk'
+  ],
+
+  // Cloud Services & Storage
+  cloud: [
+    'drive.google.com',
+    'dropbox.com',
+    'onedrive.com',
+    'icloud.com',
+    'aws.amazon.com',
+    'azure.microsoft.com',
+    'cloud.google.com'
+  ],
+
+  // Office & Productivity
+  productivity: [
+    'office.com', 'office365.com',
+    'sheets.google.com',
+    'docs.google.com',
+    'notion.so',
+    'asana.com',
+    'monday.com',
+    'trello.com',
+    'slack.com',
+    'zoom.us',
+    'teams.microsoft.com',
+    'meet.google.com'
+  ],
+
+  // Travel & Booking
+  travel: [
+    'booking.com',
+    'expedia.com',
+    'kayak.com',
+    'tripadvisor.com',
+    'airbnb.com',
+    'hotels.com',
+    'skyscanner.com'
+  ],
+
+  // Health & Wellness
+  health: [
+    'webmd.com',
+    'mayoclinic.org',
+    'healthline.com',
+    'cdc.gov',
+    'who.int',
+    'nhs.uk'
+  ]
+};
+
+// Helper function to flatten trusted domains for easier lookup
+const getAllTrustedDomains = () => {
+  const allDomains = [];
+  for (const category of Object.values(TRUSTED_DOMAINS)) {
+    allDomains.push(...category);
   }
+  return allDomains;
 };
 
 export class BrandDetector {
   constructor() {
-    this.brands = OFFICIAL_BRANDS;
+    this.trustedDomains = getAllTrustedDomains();
   }
 
   /**
@@ -82,40 +245,46 @@ export class BrandDetector {
     const lower = hostname.toLowerCase();
     const rootLower = rootDomain.toLowerCase();
 
-    // Check each known brand
-    for (const [brandName, brandInfo] of Object.entries(this.brands)) {
-      // PASS 1: Check if it's an official domain
-      if (brandInfo.domains.some(d => rootLower === d)) {
-        continue; // This is legitimate
-      }
+    // Early exit: Check if this is a trusted domain
+    if (this.trustedDomains.some(trusted => rootLower === trusted || lower.endsWith('.' + trusted))) {
+      // This is a legitimate trusted domain
+      return result;
+    }
 
-      // PASS 2: Check if brand name + suspicious pattern
-      if (lower.includes(brandName)) {
-        if (this._checkBrandSubdomain(hostname, brandName)) {
-          result.isImpersonation = true;
-          result.brand = brandName;
-          result.confidence = 0.95;
-          result.riskLevel = 'critical';
-          result.reasons.push(`Brand "${brandName}" in subdomain chain`);
-          return result;
-        }
+    // Check for brand impersonation using trusted domain names
+    for (const trustedDomain of this.trustedDomains) {
+      const brandName = trustedDomain.split('.')[0]; // Extract brand name from domain
+      if (brandName.length > 2 && lower.includes(brandName)) {
+        // Double-check it's NOT a trusted domain
+        if (!this.trustedDomains.some(trusted => rootLower === trusted || lower.endsWith('.' + trusted))) {
+          
+          // PASS 2: Check if brand name + suspicious pattern
+          if (this._checkBrandSubdomain(hostname, brandName)) {
+            result.isImpersonation = true;
+            result.brand = brandName;
+            result.confidence = 0.95;
+            result.riskLevel = 'critical';
+            result.reasons.push(`Brand "${brandName}" in subdomain chain`);
+            return result;
+          }
 
-        if (this._checkBrandWithPhishing(hostname, brandName)) {
-          result.isImpersonation = true;
-          result.brand = brandName;
-          result.confidence = 0.9;
-          result.riskLevel = 'critical';
-          result.reasons.push(`Brand "${brandName}" with phishing keywords`);
-          return result;
-        }
+          if (this._checkBrandWithPhishing(hostname, brandName)) {
+            result.isImpersonation = true;
+            result.brand = brandName;
+            result.confidence = 0.9;
+            result.riskLevel = 'critical';
+            result.reasons.push(`Brand "${brandName}" with phishing keywords`);
+            return result;
+          }
 
-        if (this._checkBrandSimilarity(rootDomain, brandName)) {
-          result.isImpersonation = true;
-          result.brand = brandName;
-          result.confidence = 0.85;
-          result.riskLevel = 'high';
-          result.reasons.push(`Domain similar to brand "${brandName}"`);
-          return result;
+          if (this._checkBrandSimilarity(rootDomain, brandName)) {
+            result.isImpersonation = true;
+            result.brand = brandName;
+            result.confidence = 0.85;
+            result.riskLevel = 'high';
+            result.reasons.push(`Domain similar to brand "${brandName}"`);
+            return result;
+          }
         }
       }
 

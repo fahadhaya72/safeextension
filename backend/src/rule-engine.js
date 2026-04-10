@@ -5,21 +5,225 @@
 
 import { getDomainParts, extractSLD } from './domain-parser.js';
 
-// Official brand domains
-const OFFICIAL_DOMAINS = {
-  'google': ['google.com', 'google.co.uk', 'google.in'],
-  'paypal': ['paypal.com', 'paypal.co.uk'],
-  'amazon': ['amazon.com', 'amazon.in', 'amazon.co.uk'],
-  'facebook': ['facebook.com', 'fb.com'],
-  'microsoft': ['microsoft.com', 'live.com', 'outlook.com'],
-  'apple': ['apple.com', 'icloud.com'],
-  'github': ['github.com'],
-  'stackoverflow': ['stackoverflow.com'],
-  'linkedin': ['linkedin.com'],
-  'twitter': ['twitter.com'],
-  'instagram': ['instagram.com'],
-  'netflix': ['netflix.com']
+// Comprehensive trusted domains whitelist
+const TRUSTED_DOMAINS = {
+  // Search & Web Browsers
+  search: [
+    'google.com', 'google.co.uk', 'google.ca', 'google.fr', 'google.de',
+    'bing.com', 'duckduckgo.com', 'yandex.com', 'baidu.com'
+  ],
+
+  // Video Platforms
+  video: [
+    'youtube.com', 'youtu.be',
+    'vimeo.com',
+    'dailymotion.com'
+  ],
+
+  // Social Media
+  social: [
+    'facebook.com', 'fb.com', 'fbcdn.net',
+    'twitter.com', 'x.com',
+    'instagram.com',
+    'linkedin.com',
+    'reddit.com',
+    'tiktok.com',
+    'snapchat.com',
+    'pinterest.com',
+    'nextdoor.com'
+  ],
+
+  // AI/ML Platforms
+  ai: [
+    'openai.com', 'chatgpt.com',
+    'anthropic.com', 'claude.ai',
+    'google.ai', 'deepmind.com',
+    'huggingface.co',
+    'perplexity.ai',
+    'github.com/copilot'
+  ],
+
+  // Tech Giants
+  tech: [
+    'microsoft.com',
+    'apple.com', 'icloud.com',
+    'amazon.com',
+    'github.com',
+    'gitlab.com',
+    'bitbucket.org',
+    'sourceforge.net'
+  ],
+
+  // Email & Communication
+  email: [
+    'gmail.com',
+    'outlook.com', 'hotmail.com',
+    'yahoo.com',
+    'protonmail.com', 'proton.me',
+    'tutanota.com',
+    'mail.google.com'
+  ],
+
+  // Developer & Tech Communities
+  developer: [
+    'stackoverflow.com',
+    'dev.to',
+    'medium.com',
+    'hashnode.com',
+    'freecodecamp.org',
+    'w3schools.com',
+    'mdn.mozilla.org'
+  ],
+
+  // News & Media
+  news: [
+    'bbc.com', 'bbc.co.uk',
+    'cnn.com',
+    'reuters.com',
+    'apnews.com',
+    'nytimes.com',
+    'theguardian.com',
+    'aljazeera.com',
+    'npr.org',
+    'pbs.org',
+    'politico.com'
+  ],
+
+  // Entertainment & Streaming
+  entertainment: [
+    'netflix.com',
+    'hulu.com',
+    'disneyplus.com',
+    'primevideo.com',
+    'hbo.com', 'hbomax.com',
+    'peacock.com',
+    'paramount.com',
+    'spotify.com',
+    'music.apple.com',
+    'deezer.com'
+  ],
+
+  // Finance & Payments
+  finance: [
+    'paypal.com',
+    'stripe.com',
+    'square.com',
+    'coinbase.com',
+    'kraken.com',
+    'binance.com',
+    'bitstamp.net'
+  ],
+
+  // Banking (Major International Banks)
+  banking: [
+    'bankofamerica.com',
+    'chase.com',
+    'wellsfargo.com',
+    'citibank.com',
+    'hsbc.com',
+    'barclays.com',
+    'ing.com',
+    'bnp.fr',
+    'santander.com',
+    'deutschebank.de'
+  ],
+
+  // Shopping & Retail
+  shopping: [
+    'amazon.com',
+    'ebay.com',
+    'walmart.com',
+    'bestbuy.com',
+    'target.com',
+    'macys.com',
+    'nordstrom.com',
+    'etsy.com'
+  ],
+
+  // Reference & Education
+  education: [
+    'wikipedia.org',
+    'wikimedia.org',
+    'coursera.org',
+    'udemy.com',
+    'edx.org',
+    'khanacademy.org',
+    'mit.edu',
+    'stanford.edu',
+    'harvard.edu',
+    'oxford.edu',
+    'cambridge.edu'
+  ],
+
+  // Government & Official
+  government: [
+    'gov.uk',
+    'gov.us',
+    'irs.gov',
+    'dmv.org',
+    'whitehouse.gov',
+    'parliament.uk'
+  ],
+
+  // Cloud Services & Storage
+  cloud: [
+    'drive.google.com',
+    'dropbox.com',
+    'onedrive.com',
+    'icloud.com',
+    'aws.amazon.com',
+    'azure.microsoft.com',
+    'cloud.google.com'
+  ],
+
+  // Office & Productivity
+  productivity: [
+    'office.com', 'office365.com',
+    'sheets.google.com',
+    'docs.google.com',
+    'notion.so',
+    'asana.com',
+    'monday.com',
+    'trello.com',
+    'slack.com',
+    'zoom.us',
+    'teams.microsoft.com',
+    'meet.google.com'
+  ],
+
+  // Travel & Booking
+  travel: [
+    'booking.com',
+    'expedia.com',
+    'kayak.com',
+    'tripadvisor.com',
+    'airbnb.com',
+    'hotels.com',
+    'skyscanner.com'
+  ],
+
+  // Health & Wellness
+  health: [
+    'webmd.com',
+    'mayoclinic.org',
+    'healthline.com',
+    'cdc.gov',
+    'who.int',
+    'nhs.uk'
+  ]
 };
+
+// Helper function to flatten trusted domains for easier lookup
+const getAllTrustedDomains = () => {
+  const allDomains = [];
+  for (const category of Object.values(TRUSTED_DOMAINS)) {
+    allDomains.push(...category);
+  }
+  return allDomains;
+};
+
+// Export both structured and flat versions
+export { TRUSTED_DOMAINS, getAllTrustedDomains };
 
 const PHISHING_KEYWORDS = [
   'login', 'signin', 'verify', 'confirm', 'authenticate',
@@ -109,12 +313,20 @@ export function checkBrandSpoof(hostname) {
   
   const lower = hostname.toLowerCase();
   const { root } = getDomainParts(hostname);
+  const allTrustedDomains = getAllTrustedDomains();
   
-  // Check if domain contains brand name but is not official
-  for (const [brand, officialDomains] of Object.entries(OFFICIAL_DOMAINS)) {
-    if (lower.includes(brand)) {
-      // Check if it's NOT an official domain
-      if (!officialDomains.some(official => lower.endsWith(official))) {
+  // Early exit: Check if this is a trusted domain
+  if (allTrustedDomains.some(trusted => lower === trusted || lower.endsWith('.' + trusted))) {
+    // This is a legitimate trusted domain
+    return result;
+  }
+  
+  // Check if domain contains brand name but is not trusted
+  for (const trustedDomain of allTrustedDomains) {
+    const brandName = trustedDomain.split('.')[0]; // Extract brand name from domain
+    if (lower.includes(brandName) && brandName.length > 2) { // Only check meaningful brand names
+      // Double-check it's NOT a trusted domain
+      if (!allTrustedDomains.some(trusted => lower === trusted || lower.endsWith('.' + trusted))) {
         // CASE 1: Brand in subdomain (paypal.secure-login.com)
         if (hostname.toLowerCase().split('.').some(part => part.includes(brand)) && 
             hostname.split('.').length > 2) {
@@ -164,10 +376,12 @@ export function checkSubdomainChains(hostname) {
   // Check for pattern: legitimate.domain.included.fake-tld
   // Example: paypal.com.malicious.xyz
   const lower = hostname.toLowerCase();
-  for (const brand of Object.keys(OFFICIAL_DOMAINS)) {
-    if (lower.includes(`${brand}.com`)) {
+  const allTrustedDomains = getAllTrustedDomains();
+  for (const trustedDomain of allTrustedDomains) {
+    const brandName = trustedDomain.split('.')[0];
+    if (lower.includes(`${brandName}.com`)) {
       const { root } = getDomainParts(hostname);
-      if (!root.endsWith(`${brand}.com`)) {
+      if (!root.endsWith(trustedDomain) && !allTrustedDomains.some(trusted => root === trusted || root.endsWith('.' + trusted))) {
         result.blocked = true;
         result.addReason('Legitimate domain buried in subdomain chain - spoofing');
         return result;
@@ -190,7 +404,11 @@ export function checkSuspiciousTLD(hostname) {
   if (SUSPICIOUS_TLDS.has(tld)) {
     // Check combined threat level
     const hasPhishingKeywords = PHISHING_KEYWORDS.some(kw => hostname.toLowerCase().includes(kw));
-    const hasBrand = Object.keys(OFFICIAL_DOMAINS).some(b => hostname.toLowerCase().includes(b));
+    const allTrustedDomains = getAllTrustedDomains();
+    const hasBrand = allTrustedDomains.some(trusted => {
+      const brandName = trusted.split('.')[0];
+      return hostname.toLowerCase().includes(brandName);
+    });
     
     if (hasPhishingKeywords || hasBrand) {
       result.blocked = true;
@@ -235,16 +453,18 @@ export function checkCharacterSubstitution(hostname) {
   const sld = extractSLD(hostname).toLowerCase();
   
   // Check against known brand names with possible substitutions
-  for (const brand of Object.keys(OFFICIAL_DOMAINS)) {
-    const substitutions = generateSubstitutions(brand);
+  const allTrustedDomains = getAllTrustedDomains();
+  for (const trustedDomain of allTrustedDomains) {
+    const brandName = trustedDomain.split('.')[0];
+    const substitutions = generateSubstitutions(brandName);
     
     for (const sub of substitutions) {
-      if (sld === sub && sld !== brand) {
-        const similarity = calculateSimilarity(brand, sld);
+      if (sld === sub && sld !== brandName) {
+        const similarity = calculateSimilarity(brandName, sld);
         
         if (similarity > 0.85) {
           result.blocked = true;
-          result.addReason(`Character substitution detected: "${sld}" ≈ "${brand}" - typosquatting`);
+          result.addReason(`Character substitution detected: "${sld}" ≈ "${brandName}" - typosquatting`);
           return result;
         }
       }
