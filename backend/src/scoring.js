@@ -237,17 +237,131 @@ export function hasCharacterSubstitutions(hostname) {
   return substitutionCount >= 2; // 2+ suspicious substitutions
 }
 
-// Enhanced domain similarity scoring using optimized Levenshtein
+// Enhanced domain similarity scoring with weighted character substitutions
 export function calculateDomainSimilarity(domain1, domain2) {
   if (!domain1 || !domain2) return 0;
   
   const distance = calculateLevenshteinOptimized(domain1, domain2);
   const maxLength = Math.max(domain1.length, domain2.length);
   
-  return 1 - (distance / maxLength);
+  // Base similarity
+  let similarity = 1 - (distance / maxLength);
+  
+  // Apply penalties for character substitutions
+  const substitutionPenalty = calculateSubstitutionPenalty(domain1, domain2);
+  similarity -= substitutionPenalty;
+  
+  // Apply bonus for exact TLD matches
+  const tld1 = domain1.split('.').pop().toLowerCase();
+  const tld2 = domain2.split('.').pop().toLowerCase();
+  if (tld1 === tld2) {
+    similarity += 0.1; // 10% bonus for same TLD
+  }
+  
+  return Math.max(0, Math.min(1, similarity));
 }
 
-// Optimized Levenshtein distance (2-row rolling window, O(n) space)
+// Calculate penalty for common phishing character substitutions
+function calculateSubstitutionPenalty(domain1, domain2) {
+  const substitutions = {
+    '0': 'o', '1': 'l', '1': 'i', '3': 'e', '4': 'a', '5': 's',
+    '8': 'b', '@': 'a', '!': 'i', '$': 's'
+  };
+  
+  let penalty = 0;
+  const shorter = domain1.length < domain2.length ? domain1 : domain2;
+  const longer = domain1.length >= domain2.length ? domain1 : domain2;
+  
+  for (let i = 0; i < shorter.length; i++) {
+    const char1 = shorter[i].toLowerCase();
+    const char2 = longer[i] ? longer[i].toLowerCase() : '';
+    
+    if (char1 !== char2) {
+      // Check if this is a common substitution
+      for (const [sub, original] of Object.entries(substitutions)) {
+        if ((char1 === sub && char2 === original) || (char2 === sub && char1 === original)) {
+          penalty += 0.15; // 15% penalty per substitution
+          break;
+        }
+      }
+    }
+  }
+  
+  return Math.min(0.5, penalty); // Cap penalty at 50%
+}
+
+// Detect look-alike domains targeting major brands
+export function detectLookalikeDomain(hostname) {
+  if (!hostname) return { detected: false, target: null, similarity: 0 };
+  
+  const normalizedHostname = normalizeDomain(hostname);
+  const domain = normalizedHostname.replace(/^www\./, '').toLowerCase();
+  
+  // Major brands to protect
+  const targetBrands = [
+    'google.com', 'facebook.com', 'amazon.com', 'microsoft.com',
+    'apple.com', 'netflix.com', 'paypal.com', 'instagram.com',
+    'twitter.com', 'linkedin.com', 'youtube.com', 'gmail.com',
+    'outlook.com', 'yahoo.com', 'ebay.com', 'walmart.com',
+    'bankofamerica.com', 'chase.com', 'wellsfargo.com', 'citibank.com'
+  ];
+  
+  let bestMatch = null;
+  let highestSimilarity = 0;
+  
+  for (const brand of targetBrands) {
+    const similarity = calculateDomainSimilarity(domain, brand);
+    
+    // Lower threshold for high-value targets
+    const threshold = getSimilarityThreshold(brand);
+    
+    if (similarity >= threshold && similarity > highestSimilarity) {
+      bestMatch = brand;
+      highestSimilarity = similarity;
+    }
+  }
+  
+  if (bestMatch && highestSimilarity > 0.7) {
+    return {
+      detected: true,
+      target: bestMatch,
+      similarity: Math.round(highestSimilarity * 100),
+      risk: calculateLookalikeRisk(highestSimilarity, bestMatch)
+    };
+  }
+  
+  return { detected: false, target: null, similarity: 0 };
+}
+
+// Get similarity threshold based on brand value
+function getSimilarityThreshold(brand) {
+  const highValueBrands = ['google.com', 'facebook.com', 'amazon.com', 'paypal.com', 'apple.com'];
+  const mediumValueBrands = ['microsoft.com', 'netflix.com', 'instagram.com', 'twitter.com'];
+  
+  if (highValueBrands.includes(brand)) return 0.65; // Lower threshold for high-value targets
+  if (mediumValueBrands.includes(brand)) return 0.70;
+  return 0.75; // Higher threshold for other brands
+}
+
+// Calculate risk level for look-alike domains
+function calculateLookalikeRisk(similarity, targetBrand) {
+  const highValueBrands = ['google.com', 'facebook.com', 'amazon.com', 'paypal.com', 'apple.com'];
+  const isHighValue = highValueBrands.includes(targetBrand);
+  
+  let riskScore = similarity * 100;
+  
+  // Increase risk for high-value brands
+  if (isHighValue) {
+    riskScore += 15;
+  }
+  
+  // Increase risk for very high similarity
+  if (similarity > 0.85) {
+    riskScore += 20;
+  }
+  
+  return Math.min(100, Math.round(riskScore));
+}
 function calculateLevenshteinOptimized(str1, str2) {
   const len1 = str1.length;
   const len2 = str2.length;

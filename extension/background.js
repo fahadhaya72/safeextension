@@ -1,6 +1,12 @@
 // Background Service Worker for SafeExtension
 // Handles messages and communicates between content scripts and popup
 
+// Import offline cache
+importScripts('offline-cache.js');
+
+// Initialize offline cache
+const offlineCache = new OfflineDomainCache();
+
 // 🔐 CONFIGURATION - Replace with your actual values
 const CONFIG = {
   API_BASE_URL: 'https://safeextension-backend.onrender.com/api', // Production backend URL
@@ -61,6 +67,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 async function checkURL(url) {
   try {
+    // First try the API
     const response = await fetch(`${CONFIG.API_BASE_URL}/extension-check`, {
       method: 'POST',
       headers: {
@@ -78,8 +85,48 @@ async function checkURL(url) {
 
     return await response.json();
   } catch (error) {
-    console.error('Background API Error:', error);
-    throw error;
+    console.warn('API check failed, falling back to offline cache:', error.message);
+    
+    // Fallback to offline cache
+    try {
+      const domain = new URL(url).hostname;
+      const offlineResult = await offlineCache.checkDomain(domain);
+      
+      if (offlineResult.malicious) {
+        return {
+          url,
+          action: 'block',
+          score: 15,
+          risk_level: 'high',
+          reasons: [{
+            code: 'OFFLINE_CACHE_BLOCK',
+            points: 85,
+            description: offlineResult.reason
+          }],
+          confidence: offlineResult.confidence,
+          timestamp: new Date().toISOString(),
+          source: 'offline_cache'
+        };
+      } else {
+        return {
+          url,
+          action: 'allow',
+          score: 75,
+          risk_level: 'medium',
+          reasons: [{
+            code: 'OFFLINE_CACHE_ALLOW',
+            points: 25,
+            description: offlineResult.reason
+          }],
+          confidence: offlineResult.confidence,
+          timestamp: new Date().toISOString(),
+          source: 'offline_cache'
+        };
+      }
+    } catch (offlineError) {
+      console.error('Offline cache also failed:', offlineError);
+      throw new Error('Both API and offline cache failed');
+    }
   }
 }
 

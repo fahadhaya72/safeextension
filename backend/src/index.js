@@ -25,6 +25,7 @@ import {
 import { checkSafeBrowsing } from './services/safebrowsing.js';
 import { getDomainAgeDays } from './services/whois.js';
 import { detectBrandImpersonation, getGeographicRisk, analyzeCertificate, getReputationScore, hasSuspiciousTLD } from './advanced-scoring.js';
+import { authenticateRequest, createAuthenticatedRateLimit } from './auth.js';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -91,56 +92,68 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(morgan('combined'));
 
-// API Authentication Middleware
-app.use('/api/', (req, res, next) => {
-  // Skip authentication for health check
-  if (req.path === '/health') return next();
-  
-  const providedKey = req.headers['x-api-key'];
-  const providedExtensionId = req.headers['x-extension-id'];
-  
-  // Check API key
-  if (!API_KEY || providedKey !== API_KEY) {
-    if (process.env.NODE_ENV !== 'production') {
-      logger.warn({ expectedApiKey: API_KEY, providedApiKey: providedKey, ip: req.ip }, 'API key mismatch debug');
-    }
-    logger.warn({ ip: req.ip, userAgent: req.get('User-Agent') }, 'Unauthorized API access attempt');
-    return res.status(401).json({ 
-      error: 'unauthorized',
-      message: 'Valid API key required' 
-    });
-  }
-  
-  // Check extension ID (if configured) - but allow web frontend
-  if (EXTENSION_ID && providedExtensionId !== EXTENSION_ID && providedExtensionId !== 'web') {
-    logger.warn({ ip: req.ip, extensionId: providedExtensionId }, 'Invalid extension ID');
-    return res.status(403).json({ 
-      error: 'forbidden',
-      message: 'Invalid extension ID' 
-    });
-  }
-  
-  next();
-});
+// JWT Authentication Middleware
+app.use('/api/', authenticateRequest);
 
-// Enhanced rate limiting per API key
-const limiter = rateLimit({ 
+// Enhanced rate limiting per authenticated user
+const limiter = createAuthenticatedRateLimit({ 
   windowMs: 60 * 1000, 
-  max: 60, // Increased to 60 req/min for testing
-  message: { 
-    error: 'rate_limit_exceeded', 
-    message: 'Too many requests, please try again later' 
-  },
-  keyGenerator: (req) => {
-    return req.headers['x-api-key'] || req.ip;
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
+  max: 60 // 60 req/min per authenticated user
 });
 
 app.use('/api/', limiter);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
+
+// Token generation endpoint for extension authentication
+app.post('/api/token', async (req, res) => {
+  try {
+    const { apiKey, extensionId } = req.body || {};
+    
+    if (!apiKey || !extensionId) {
+      return res.status(400).json({
+        error: 'missing_credentials',
+        message: 'API key and extension ID are required'
+      });
+    }
+    
+    const expectedApiKey = process.env.SAFEEXTENSION_API_KEY;
+    const expectedExtensionId = process.env.CHROME_EXTENSION_ID;
+    
+    // Validate credentials
+    if (apiKey !== expectedApiKey || extensionId !== expectedExtensionId) {
+      logger.warn({ 
+        ip: req.ip,
+        extensionId,
+        apiKeyProvided: !!apiKey
+      }, 'Token generation failed - invalid credentials');
+      
+      return res.status(401).json({
+        error: 'invalid_credentials',
+        message: 'Invalid API key or extension ID'
+      });
+    }
+    
+    // Generate JWT token
+    const { generateExtensionToken } = await import('./auth.js');
+    const token = generateExtensionToken(extensionId, apiKey);
+    
+    logger.info({ extensionId }, 'JWT token generated successfully');
+    
+    return res.json({
+      token,
+      expiresIn: process.env.JWT_EXPIRES_IN || '24h',
+      tokenType: 'Bearer'
+    });
+    
+  } catch (error) {
+    logger.error({ error: error.message }, 'Token generation failed');
+    return res.status(500).json({
+      error: 'internal_error',
+      message: 'Failed to generate token'
+    });
+  }
+});
 
 // Shared result builder for check-url
 function responseFromFactors(url, basicFactors, advancedFactors, extra) {
