@@ -2,13 +2,17 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import logger from './logger.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'default-secret-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 
 // Generate JWT token for extension
 export function generateExtensionToken(extensionId, apiKey) {
   if (!extensionId || !apiKey) {
     throw new Error('Extension ID and API key are required');
+  }
+  
+  if (!JWT_SECRET) {
+    throw new Error('JWT_SECRET environment variable is required');
   }
 
   const payload = {
@@ -27,6 +31,9 @@ export function generateExtensionToken(extensionId, apiKey) {
 // Verify JWT token
 export function verifyToken(token) {
   try {
+    if (!JWT_SECRET) {
+      throw new Error('JWT_SECRET environment variable is required');
+    }
     const decoded = jwt.verify(token, JWT_SECRET);
     
     // Check if token is still valid and not expired

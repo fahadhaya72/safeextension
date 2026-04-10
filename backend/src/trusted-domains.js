@@ -29,9 +29,6 @@ function isDomainTrusted(domain) {
 function addTrustedDomain(domain) {
     if (!trustedDomains.includes(domain)) {
         trustedDomains.push(domain);
-        console.log(`Domain ${domain} added to trusted domains.`);
-    } else {
-        console.log(`Domain ${domain} is already in the trusted list.`);
     }
 }
 
@@ -43,9 +40,6 @@ function removeTrustedDomain(domain) {
     const index = trustedDomains.indexOf(domain);
     if (index !== -1) {
         trustedDomains.splice(index, 1);
-        console.log(`Domain ${domain} removed from trusted domains.`);
-    } else {
-        console.log(`Domain ${domain} is not in the trusted list.`);
     }
 }
 
