@@ -55,8 +55,11 @@ app.use(express.json({ limit: '10mb' }));
 // CORS configuration to support multiple origins
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
+    // Allow requests with no origin (like mobile apps, curl requests, and file://)
     if (!origin) return callback(null, true);
+    
+    // Allow null origin (file:// protocol)
+    if (origin === 'null') return callback(null, true);
     
     // List of allowed origins
     const allowedOrigins = [
