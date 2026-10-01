@@ -26,6 +26,7 @@ import { checkSafeBrowsing } from './services/safebrowsing.js';
 import { getDomainAgeDays } from './services/whois.js';
 import { detectBrandImpersonation, getGeographicRisk, analyzeCertificate, getReputationScore, hasSuspiciousTLD } from './advanced-scoring.js';
 import { authenticateRequest, createAuthenticatedRateLimit } from './auth.js';
+import { isAllowedOrigin } from './cors.js';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -55,37 +56,11 @@ app.use(express.json({ limit: '10mb' }));
 // CORS configuration to support multiple origins
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl requests, and file://)
-    if (!origin) return callback(null, true);
-    
-    // Allow null origin (file:// protocol)
-    if (origin === 'null') return callback(null, true);
-    
-    // List of allowed origins
-    const allowedOrigins = [
-      'https://safeextension.vercel.app',
-      'chrome-extension://your_extension_id',
-      'http://localhost:3000',
-      'http://localhost:3001'
-    ];
-    
-    // If ALLOWED_ORIGIN is set to '*', allow all origins (development only)
-    if (ALLOWED_ORIGIN === '*') {
-      return callback(null, true);
-    }
-    
-    // Check if the origin is in the allowed list
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    
-    // Check if the origin matches the ALLOWED_ORIGIN env var
-    if (ALLOWED_ORIGIN && ALLOWED_ORIGIN !== '*' && origin === ALLOWED_ORIGIN) {
-      return callback(null, true);
-    }
-    
-    // Block all other origins
-    return callback(new Error('Not allowed by CORS'));
+    const allowed = isAllowedOrigin(origin, {
+      allowedOrigin: ALLOWED_ORIGIN,
+      extensionId: EXTENSION_ID
+    });
+    return callback(null, allowed);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

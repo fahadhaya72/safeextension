@@ -328,10 +328,10 @@ export function checkBrandSpoof(hostname) {
       // Double-check it's NOT a trusted domain
       if (!allTrustedDomains.some(trusted => lower === trusted || lower.endsWith('.' + trusted))) {
         // CASE 1: Brand in subdomain (paypal.secure-login.com)
-        if (hostname.toLowerCase().split('.').some(part => part.includes(brand)) && 
+        if (hostname.toLowerCase().split('.').some(part => part.includes(brandName)) &&
             hostname.split('.').length > 2) {
           result.blocked = true;
-          result.addReason(`Brand name "${brand}" injected in subdomain - spoofing attack`);
+          result.addReason(`Brand name "${brandName}" injected in subdomain - spoofing attack`);
           return result;
         }
         
@@ -339,16 +339,16 @@ export function checkBrandSpoof(hostname) {
         const hasPhishingKeywords = PHISHING_KEYWORDS.some(kw => lower.includes(kw));
         if (hasPhishingKeywords) {
           result.blocked = true;
-          result.addReason(`Brand "${brand}" + phishing keywords detected - likely spoofing`);
+          result.addReason(`Brand "${brandName}" + phishing keywords detected - likely spoofing`);
           return result;
         }
         
         // CASE 3: Similar but slightly off (paypa1.com vs paypal.com)
-        if (brand.length >= 4) {
-          const similarity = calculateSimilarity(brand, extractSLD(hostname));
+        if (brandName.length >= 4) {
+          const similarity = calculateSimilarity(brandName, extractSLD(hostname));
           if (similarity > 0.75 && similarity < 0.99) {
             result.warned = true;
-            result.addReason(`Domain similar to brand "${brand}" - possible typosquatting`);
+            result.addReason(`Domain similar to brand "${brandName}" - possible typosquatting`);
           }
         }
       }
@@ -462,7 +462,7 @@ export function checkCharacterSubstitution(hostname) {
       if (sld === sub && sld !== brandName) {
         const similarity = calculateSimilarity(brandName, sld);
         
-        if (similarity > 0.85) {
+        if (similarity > 0.75) {
           result.blocked = true;
           result.addReason(`Character substitution detected: "${sld}" ≈ "${brandName}" - typosquatting`);
           return result;
@@ -593,12 +593,12 @@ function generateSubstitutions(brand) {
 
 function countSubstitutions(hostname) {
   let count = 0;
-  
-  // Count suspicious character combinations
-  if (/[0o]/g.test(hostname) && /[0o]/.test(hostname)) count++;
-  if (/[1il]/g.test(hostname) && /[1il]/.test(hostname)) count++;
-  if (/[5s]/g.test(hostname) && /[5s]/.test(hostname)) count++;
-  if (/[@a]/g.test(hostname) && /[@a]/.test(hostname)) count++;
+
+  const lower = hostname.toLowerCase();
+  if (lower.includes('0') && lower.includes('o')) count++;
+  if (lower.includes('1') && (lower.includes('i') || lower.includes('l'))) count++;
+  if (lower.includes('5') && lower.includes('s')) count++;
+  if (lower.includes('@') && lower.includes('a')) count++;
   
   return count;
 }
